@@ -61,16 +61,24 @@ http:
 
 {% if enable_remote_apps_routes %}
     paperless:
-      loadBalancer:
-        servers:
-          - url: "http://{{ ryzen_ip }}:{{ paperless_service_port }}"
-        passHostHeader: true
+      rule: "Host(`{{ paperless_domain }}`)"
+      service: "paperless"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+      middlewares:
+        - authentik-auth
 
     immich:
-      loadBalancer:
-        servers:
-          - url: "http://{{ ryzen_ip }}:{{ immich_service_port }}"
-        passHostHeader: true
+      rule: "Host(`{{ immich_domain }}`)"
+      service: "immich"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+      middlewares:
+        - authentik-auth
 {% endif %}
 
   serversTransports:
