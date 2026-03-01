@@ -211,11 +211,11 @@ ansible-playbook -i inventory.ini deploy_n100.yml --tags adguard
 ### 3) Traefik fails to detect containers on Docker Engine 27+
 
 **Symptom:** Services return 404. Traefik logs show:
-`client version 1.24 is too old. Minimum supported API version is 1.44`
+`client version 1.24 is too old. Minimum supported API version is 1.44, please upgrade your client to a newer version`
 
-**Cause:** `traefik:v3.0` is too old for newer Docker API.
+**Cause:** Docker 29.0 raised the minimum required API version from 1.24 to 1.44. Traefik v3.0–v3.5 had the API version hardcoded at 1.24 and crashes on startup with Docker 29+. Fixed in Traefik v3.6.1 (auto-negotiation, upstream PR #12256).
 
-**Fix:** Keep `traefik_version: "v3"` in `group_vars/n100.yml` and redeploy:
+**Fix:** Ensure `traefik_version` is pinned to `v3.6.1` or newer in `group_vars/n100.yml`, then redeploy:
 ```bash
 ansible-playbook -i inventory.ini deploy_n100.yml --tags traefik
 ```

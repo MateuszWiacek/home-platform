@@ -15,6 +15,7 @@ The "why" behind the stack. For incidents and day-2 procedures, go to [`RUNBOOK.
 - [Operational Targets](#operational-targets)
 - [Service Endpoints](#service-endpoints)
 - [Ansible Structure](#ansible-structure)
+- [Network, Philosophy & Other](#Network,-Philosophy-&-Other)
 
 ---
 
@@ -22,12 +23,12 @@ The "why" behind the stack. For incidents and day-2 procedures, go to [`RUNBOOK.
 
 The short version of what this file shows:
 
-- A homelab designed like a platform — DNS, TLS, identity as one coherent stack, not bolted-on services
+- A homelab designed like a platform - DNS, TLS, identity as one coherent stack, not bolted-on services
 - Every decision documented with a reason. Not "I saw it on YouTube", but actual trade-off thinking
 - Storage split by workload type — ZFS on the NAS, NVMe for latency-sensitive paths
 - Ansible structure that scales: roles, group_vars, vault. Adding a new service is DNS + labels + a role
 
-If you want the operational side — how I recover from failures, what breaks first, what to check — that's in [`RUNBOOK.md`](RUNBOOK.md).
+If you want the operational side - how I recover from failures, what breaks first, what to check — that's in [`RUNBOOK.md`](RUNBOOK.md).
 
 ---
 
@@ -176,3 +177,116 @@ secrets.yml               # Vault: tokens, passwords, API keys — never in git
 Roles are independently deployable via tags. IPs, domains, versions → `group_vars`. Credentials → `secrets.yml` (vault).
 
 
+## Network, Philosophy & Other
+
+If you made it here, you’re either **really interested** (respect) or **really bored** 😄
+
+This is the least formal part of the document — a small Easter egg with some personality and the thinking behind how I organize things.
+
+Like many software geeks, I like Easter eggs. This is mine.
+
+---
+
+### First: the network part (because I promised)
+
+I don’t include a full network topology in this repo, because that is not the main scope of this homelab documentation.
+
+I **do** want to show how I organize things, because once you run a multi-node environment at home, structure stops being optional.
+
+---
+
+### Router choice (OpenWrt)
+
+At home I run **OpenWrt**.
+
+It has pros and cons (trade-offs everywhere), but for my use case I value:
+
+- **flexibility**
+- **regular updates** (especially vs some consumer brands)
+- **features that matter in day-2 operations** (VLANs, proper control)
+
+For me, **IP address organization is critical** as the environment grows.
+
+---
+
+### Example network organization (example, not a rule)
+
+Use IP ranges with intent, so you don’t need to scan the network and guess what is what.
+
+- **Critical services** → `192.168.1.2–10`  
+  Easy to remember, easy to reach.
+
+- **VMs / servers** → `192.168.1.11–30` (expand later if needed)  
+  As the number of machines grows, this reduces mental overhead.
+
+- **Printers / infrastructure-like devices** → `192.168.1.90–99`
+
+- **DHCP clients** (laptops, phones, random devices) → `192.168.1.100–254`  
+  Controlled chaos 😄
+
+You can organize it differently — this is simply the pattern I use to keep things readable and predictable.
+
+---
+
+### VLANs / IoT segregation (highly recommended)
+
+A very useful feature of better routers (and OpenWrt) is **VLAN support**.
+
+I keep all IoT devices (robot vacuum, air purifiers, smart bulbs, etc.) in a **separate Wi-Fi/network** with **no access to the main network**.
+
+**Practical setup:** separate IoT network  
+**Principle:** segment what you do not fully trust  
+**Trade-off:** more configuration, but the security and clarity are worth it
+
+Also, I’d rather not have my *too smart* vacuum anywhere near Proxmox 😄
+
+I’m a big fan of **segmentation and security**, and IoT vendors are… let’s say… not exactly famous for security engineering.
+
+---
+
+### Why this is in `architecture`
+
+**Why not `README`?**  
+Because many people leave early (fair enough).
+
+**Why not `runbook`?**  
+Because runbooks are for operations — usually when something is on fire and you need clear steps, not side notes.
+
+`Architecture` is the right place for this.
+
+At the end of the day, **who we are as engineers shows in how we design systems**.  
+This section is both a practical note and a small Easter egg.
+
+And yes — it’s **my document**, so I decide 😄
+
+---
+
+### This repo will evolve
+
+This repo reflects what I run at home **today**, but it will evolve naturally over time.
+
+I like experimenting, and I already have more ideas than time (including a future OPNsense-based firewall setup).
+
+At the same time, as of **February 2026**, I need to keep a healthy balance:
+
+- I do similar work professionally at a much bigger scale
+- I genuinely enjoy tinkering
+- I do not want to burn out and lose that enjoyment
+
+Even with AI (which I’ve been using and experimenting with since 2022) — and yes, I treat it as an **exoskeleton / force multiplier** — balance still matters.
+
+---
+
+### Contact
+
+If you got this far and you:
+
+- have questions
+- have suggestions
+- found a bug
+- want to request something (maybe hosting some software in a homelab)
+- or just want to talk like two geeks
+
+you can reach me at:
+
+`<myname><mysurname>92@<email from 8.8.8.8 guys>`

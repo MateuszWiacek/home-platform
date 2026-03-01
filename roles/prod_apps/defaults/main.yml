@@ -22,4 +22,4 @@ paperless_data_dir: "{{ paperless_stack_dir }}/data"
 backups_root_dir: "{{ app_stacks_root }}/backups"
 
 # Backup policy
-db_backup_retention_days: 7
+db_backup_retention_days: 28
