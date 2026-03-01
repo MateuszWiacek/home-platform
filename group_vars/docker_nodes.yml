@@ -27,7 +27,7 @@ immich_version: "release"
 paperless_version: "latest"
 
 # Internal dependencies (override only if required)
-immich_postgres_image: "tensorchord/pgvecto-rs:pg14-v0.2.0"
+immich_postgres_image: "ghcr.io/immich-app/postgres:14-vectorchord0.4.3"
 immich_redis_image: "redis:6.2-alpine"
 paperless_postgres_image: "docker.io/library/postgres:16-alpine"
 paperless_redis_image: "docker.io/library/redis:7-alpine"

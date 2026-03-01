@@ -542,7 +542,48 @@ ssh -o PubkeyAuthentication=no root@10.0.0.10
 ssh <user>@10.0.0.10
 sudo sshd -t
 ```
+---
+### Immich — pgvecto-rs → VectorChord migration
 
+Required when upgrading Immich from a version using `tensorchord/pgvecto-rs` to `ghcr.io/immich-app/postgres` (VectorChord). From Immich v2.x onwards, VectorChord is the official successor to pgvecto-rs.
+
+**If you have existing data (running Immich instance):**
+```bash
+# 1. Backup before anything else
+docker exec immich_postgres pg_dumpall -U immich > /tmp/immich_backup_pre_migration.sql
+
+# 2. Stop Immich (not the database)
+cd /opt/immich
+docker compose stop immich-server immich-machine-learning
+
+# 3. Update the postgres image in docker-compose.yml to:
+# ghcr.io/immich-app/postgres:14-vectorchord0.4.3
+# Via Ansible: update immich_postgres_image in group_vars/docker_nodes.yml and redeploy
+
+# 4. Restart only the database with the new image
+docker compose up -d postgres
+
+# 5. Run the migration
+docker exec -it immich_postgres psql -U immich -d immich -c "
+  ALTER EXTENSION vectors UPDATE;
+  SELECT pgvectors_migrate();
+"
+
+# 6. Start the rest of the stack
+docker compose up -d
+
+# 7. Check logs for errors
+docker logs immich_server --tail 50
+```
+
+**If this is a fresh install (no data):**
+```bash
+cd /opt/immich
+docker compose down -v   # removes database volumes — all data will be lost
+docker compose up -d     # initialises the database with VectorChord from scratch
+```
+
+---
 ---
 
 ## Ansible Gotchas

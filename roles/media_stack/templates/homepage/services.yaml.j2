@@ -33,6 +33,28 @@
         icon: adguard-home.png
         href: "https://{{ adguard_domain }}"
         description: "Network-wide DNS protection"
+- Media & Docs:
+    - Immich:
+        icon: immich.png
+        href: "https://{{ immich_domain }}"
+        description: "Photo & Video Library"
+{% if immich_api_key is defined and (immich_api_key | length) > 0 %}
+        widget:
+          type: immich
+          url: "http://{{ ryzen_ip }}:{{ immich_service_port }}"
+          key: "{{ immich_api_key }}"
+{% endif %}
+
+    - Paperless:
+        icon: paperless-ngx.png
+        href: "https://{{ paperless_domain }}"
+        description: "Document Archive"
+{% if paperless_api_key is defined and (paperless_api_key | length) > 0 %}
+        widget:
+          type: paperlessngx
+          url: "http://{{ ryzen_ip }}:{{ paperless_service_port }}"
+          key: "{{ paperless_api_key }}"
+{% endif %}
 
 - Routing & Edge:
     - Traefik:

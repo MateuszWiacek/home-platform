@@ -26,7 +26,7 @@
     src: "{{ nas_ip }}:{{ item.src }}"
     path: "{{ item.path }}"
     fstype: nfs
-    opts: "rw,relatime,soft,intr,tcp,timeo=600,retrans=2"
+    opts: "rw,relatime,hard,intr,tcp,timeo=600,retrans=2"
     state: mounted
   loop:
     - { src: "{{ nas_source_config }}", path: "{{ mnt_fast_config }}" }
