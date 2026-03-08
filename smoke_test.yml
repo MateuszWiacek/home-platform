@@ -1,0 +1,210 @@
+---
+# ============================================================
+# POST-DEPLOY SMOKE TEST
+# Run after deploy to verify container health and service endpoints.
+#
+# Usage:
+#   ansible-playbook -i inventory.ini smoke_test.yml
+#   ansible-playbook -i inventory.ini smoke_test.yml --tags nas
+#   ansible-playbook -i inventory.ini smoke_test.yml --tags ryzen
+# ============================================================
+
+- name: "Smoke Test — NAS (core + media)"
+  hosts: n100
+  become: true
+  gather_facts: false
+  tags: [nas]
+
+  vars:
+    nas_expected_containers:
+      - traefik
+      - adguard
+      - authentik-server
+      - authentik-worker
+      - authentik-db
+      - authentik-redis
+      - authentik-ldap-outpost
+      - vaultwarden
+      - portainer
+      - jellyfin
+      - homepage
+
+    public_https_endpoints:
+      - { name: "Authentik", url: "https://{{ authentik_domain }}" }
+      - { name: "AdGuard Home", url: "https://{{ adguard_domain }}" }
+      - { name: "Vaultwarden", url: "https://{{ vaultwarden_domain }}" }
+      - { name: "Portainer", url: "https://{{ portainer_domain }}" }
+      - { name: "Homepage", url: "https://{{ homepage_domain }}" }
+      - { name: "Jellyfin", url: "https://{{ jellyfin_domain }}" }
+      - { name: "Immich", url: "https://{{ immich_domain }}" }
+      - { name: "Paperless", url: "https://{{ paperless_domain }}" }
+      - { name: "TrueNAS", url: "https://{{ truenas_domain }}" }
+
+  tasks:
+    - name: "NAS | Check container status"
+      ansible.builtin.command:
+        cmd: "docker ps --format '{% raw %}{{ .Names }} {{ .Status }}{% endraw %}' --filter name={{ item }}"
+      register: _nas_containers
+      loop: "{{ nas_expected_containers }}"
+      changed_when: false
+      failed_when: false
+
+    - name: "NAS | Report container health"
+      ansible.builtin.debug:
+        msg: >-
+          {{ item.item }}:
+          {{ 'UP' if item.stdout | length > 0 and 'Up' in item.stdout else 'DOWN' }}
+          {{ '— ' + item.stdout if item.stdout | length > 0 else '' }}
+      loop: "{{ _nas_containers.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "NAS | Assert all containers are running"
+      ansible.builtin.assert:
+        that:
+          - item.stdout | length > 0
+          - "'Up' in item.stdout"
+        fail_msg: "Container {{ item.item }} is not running!"
+        quiet: true
+      loop: "{{ _nas_containers.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "NAS | Verify RAM limits are enforced on critical containers"
+      ansible.builtin.command:
+        cmd: >-
+          docker inspect --format
+          '{% raw %}{{ .Name }} mem={{ .HostConfig.Memory }}{% endraw %}'
+          traefik adguard vaultwarden portainer jellyfin homepage
+      register: _ram_limits
+      changed_when: false
+
+    - name: "NAS | Display RAM limits"
+      ansible.builtin.debug:
+        msg: "{{ _ram_limits.stdout_lines }}"
+
+    - name: "NAS | Verify Traefik dashboard responds (LAN)"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ traefik_dashboard_port }}/api/overview"
+        return_content: false
+        status_code: 200
+        timeout: 10
+      when: traefik_publish_api_port | default(false)
+
+    - name: "NAS | DNS resolve check (AdGuard)"
+      ansible.builtin.command:
+        cmd: "dig +short {{ authentik_domain }} @127.0.0.1"
+      register: _dns_check
+      changed_when: false
+      failed_when: _dns_check.stdout | length == 0
+
+    - name: "NAS | DNS resolves to"
+      ansible.builtin.debug:
+        msg: "{{ authentik_domain }} → {{ _dns_check.stdout }}"
+
+    - name: "NAS | Verify public HTTPS endpoints respond"
+      ansible.builtin.uri:
+        url: "{{ item.url }}"
+        return_content: false
+        follow_redirects: none
+        status_code: [200, 302, 401, 403]
+        timeout: 10
+      loop: "{{ public_https_endpoints }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+
+- name: "Smoke Test — Ryzen (prod apps)"
+  hosts: docker_nodes
+  become: true
+  gather_facts: false
+  tags: [ryzen]
+
+  vars:
+    ryzen_expected_containers:
+      - immich_server
+      - immich_machine_learning
+      - immich_postgres
+      - immich_redis
+      - paperless_webserver
+      - paperless_db
+      - paperless_redis
+      - portainer_agent
+
+  tasks:
+    - name: "Ryzen | Check container status"
+      ansible.builtin.command:
+        cmd: "docker ps --format '{% raw %}{{ .Names }} {{ .Status }}{% endraw %}' --filter name={{ item }}"
+      register: _ryzen_containers
+      loop: "{{ ryzen_expected_containers }}"
+      changed_when: false
+      failed_when: false
+
+    - name: "Ryzen | Report container health"
+      ansible.builtin.debug:
+        msg: >-
+          {{ item.item }}:
+          {{ 'UP' if item.stdout | length > 0 and 'Up' in item.stdout else 'DOWN' }}
+          {{ '— ' + item.stdout if item.stdout | length > 0 else '' }}
+      loop: "{{ _ryzen_containers.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Ryzen | Assert all containers are running"
+      ansible.builtin.assert:
+        that:
+          - item.stdout | length > 0
+          - "'Up' in item.stdout"
+        fail_msg: "Container {{ item.item }} is not running!"
+        quiet: true
+      loop: "{{ _ryzen_containers.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: "Ryzen | Verify NFS mounts are active"
+      ansible.builtin.command:
+        cmd: "findmnt --noheadings --output TARGET,FSTYPE --types nfs,nfs4"
+      register: _nfs_mounts
+      changed_when: false
+
+    - name: "Ryzen | Display NFS mounts"
+      ansible.builtin.debug:
+        msg: "{{ _nfs_mounts.stdout_lines }}"
+
+    - name: "Ryzen | Verify Immich HTTP responds"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ immich_service_port }}/api/server/ping"
+        return_content: true
+        status_code: 200
+        timeout: 10
+      register: _immich_ping
+      failed_when: false
+
+    - name: "Ryzen | Immich status"
+      ansible.builtin.debug:
+        msg: "Immich: {{ 'OK' if _immich_ping.status == 200 else 'UNREACHABLE (status: ' + (_immich_ping.status | string) + ')' }}"
+
+    - name: "Ryzen | Verify Paperless HTTP responds"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ paperless_service_port }}/"
+        headers:
+          Host: "{{ paperless_domain }}"
+        return_content: false
+        follow_redirects: none
+        status_code: [200, 302]
+        timeout: 10
+      register: _paperless_ping
+      failed_when: false
+
+    - name: "Ryzen | Paperless status"
+      ansible.builtin.debug:
+        msg: "Paperless: {{ 'OK' if _paperless_ping.status in [200, 302] else 'UNREACHABLE (status: ' + (_paperless_ping.status | string) + ')' }}"
+
+    - name: "Ryzen | Check backup script exists"
+      ansible.builtin.stat:
+        path: "{{ backups_root_dir | default('/opt/backups') }}/backup_dbs.sh"
+      register: _backup_script
+
+    - name: "Ryzen | Backup script status"
+      ansible.builtin.debug:
+        msg: "Backup script: {{ 'present' if _backup_script.stat.exists else 'MISSING' }}"

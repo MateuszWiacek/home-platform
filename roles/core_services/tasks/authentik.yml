@@ -46,8 +46,10 @@
     dest: "{{ docker_config_dir }}/authentik/ldap-outpost.yml"
     mode: '0600'
   no_log: true
+  notify: "Restart Authentik"
 
 - name: "Authentik | Start stack with LDAP Outpost"
   ansible.builtin.shell:
     cmd: "docker compose -f docker-compose.yml -f ldap-outpost.yml up -d --remove-orphans"
     chdir: "{{ docker_config_dir }}/authentik"
+  changed_when: false

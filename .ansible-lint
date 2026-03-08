@@ -1,0 +1,28 @@
+---
+# Ansible-lint configuration for homelab CI
+
+# Profiles: min, basic, moderate, safety, shared, production
+# Start with basic — tighten later as codebase matures.
+profile: basic
+
+# Exclude paths that are not Ansible content
+exclude_paths:
+  - .github/
+  - docs/
+
+# Skip rules that conflict with homelab design decisions
+skip_list:
+  # We intentionally use shell for docker compose (handlers, start tasks)
+  - command-instead-of-shell
+  # Jinja2 in YAML values triggers false positives
+  - yaml[truthy]
+  # Some role names use underscores (core_services, media_stack) — that's fine
+  - role-name
+  # Variables in role defaults are intentionally shared via group_vars;
+  # enforcing per-role prefixes would break the entire variable naming scheme.
+  - var-naming[no-role-prefix]
+
+# Treat warnings as non-fatal during initial adoption
+warn_list:
+  - no-changed-when
+  - no-handler

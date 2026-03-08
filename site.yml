@@ -1,3 +1,6 @@
 ---
-# Backward-compatible alias used in older docs/history.
-- import_playbook: deploy_docker_nodes.yml
+- name: "Deploy NAS (N100)"
+  import_playbook: deploy_n100.yml
+
+- name: "Deploy Docker nodes (Ryzen)"
+  import_playbook: deploy_docker_nodes.yml

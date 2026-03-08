@@ -1,6 +1,6 @@
 ---
 # Create local directories on Ryzen NVMe for performance-critical data
-- name: "Immich | Create local app directories"
+- name: "Immich | Create managed app directories"
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -9,8 +9,15 @@
     mode: '0755'
   loop:
     - "{{ immich_stack_dir }}"
-    - "{{ immich_db_dir }}"
     - "{{ immich_model_cache_dir }}"
+
+- name: "Immich | Create runtime data directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+  loop:
+    - "{{ immich_db_dir }}"
+    - "{{ immich_stack_dir }}/redis"
 
 - name: "Immich | Deploy docker-compose file"
   ansible.builtin.template:
@@ -19,6 +26,7 @@
     owner: "{{ app_uid }}"
     group: "{{ app_gid }}"
     mode: '0644'
+  notify: Restart Immich
 
 - name: "Immich | Deploy environment file"
   ansible.builtin.template:
@@ -28,14 +36,10 @@
     group: "{{ app_gid }}"
     mode: '0600'
   no_log: true
+  notify: Restart Immich
 
-# Start the Immich stack using Docker Compose V2
-- name: "Immich | Run container"
-  community.docker.docker_compose_v2:
-    project_src: "{{ immich_stack_dir }}"
-    state: present
-    # Explicitly point to the .env file to avoid "variable not set" warnings
-    files:
-      - docker-compose.yml
-    env_files:
-      - .env
+- name: "Immich | Start containers"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ immich_stack_dir }}"
+  changed_when: false

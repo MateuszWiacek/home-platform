@@ -11,7 +11,9 @@ authentik_uid: "1000"
 authentik_gid: "1000"
 
 # Traefik defaults (override in group_vars for environment-specific behavior)
-traefik_version: "v3"
+# Pin to v3.6.1+ — first release with auto-negotiated Docker API version.
+# Fixes Docker 29 incompatibility (upstream PR #12256).
+traefik_version: "v3.6.9"
 traefik_publish_api_port: false
 traefik_dashboard_via_router: true
 enable_remote_apps_routes: false

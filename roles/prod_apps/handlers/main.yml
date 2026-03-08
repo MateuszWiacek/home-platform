@@ -1,0 +1,10 @@
+---
+- name: Restart Immich
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ immich_stack_dir }}"
+
+- name: Restart Paperless
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ paperless_stack_dir }}"

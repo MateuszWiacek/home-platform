@@ -1,0 +1,52 @@
+---
+name: Lint & Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: "YAML / Ansible lint + syntax check"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install toolchain
+        run: |
+          pip install --upgrade pip
+          pip install ansible-core ansible-lint yamllint
+
+      - name: Install Ansible Galaxy collections
+        run: ansible-galaxy collection install -r requirements.yml
+
+      # Playbooks import secrets.yml via vars_files.
+      # Generate a dummy file so syntax-check can parse the playbook structure.
+      - name: Generate dummy secrets for CI
+        run: |
+          sed 's/CHANGE_ME/ci_placeholder/g; s/CF_DNS_API_TOKEN_HERE/ci_placeholder/g; s/admin@example.com/ci@example.com/g' \
+            secrets.yml.example > secrets.yml
+
+      - name: yamllint
+        run: yamllint .
+
+      - name: ansible-lint
+        run: ansible-lint
+
+      - name: Ansible syntax check (NAS playbook)
+        run: ansible-playbook -i inventory.ini deploy_n100.yml --syntax-check
+
+      - name: Ansible syntax check (Ryzen playbook)
+        run: ansible-playbook -i inventory.ini deploy_docker_nodes.yml --syntax-check
+
+      - name: Ansible syntax check (smoke test)
+        run: ansible-playbook -i inventory.ini smoke_test.yml --syntax-check

@@ -36,6 +36,10 @@ http:
         - "websecure"
       tls:
         certResolver: "myresolver"
+{% if enable_authentik_protection %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
 
     immich:
       rule: "Host(`{{ immich_domain }}`)"
@@ -44,6 +48,10 @@ http:
         - "websecure"
       tls:
         certResolver: "myresolver"
+{% if enable_authentik_protection %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
 {% endif %}
 
   services:

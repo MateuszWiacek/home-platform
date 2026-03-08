@@ -1,0 +1,45 @@
+---
+# ============================================================
+# PRE-FLIGHT VALIDATION — PROD APPS
+# Verify NAS reachability, secrets, and NFS readiness before deploy.
+# ============================================================
+
+- name: "Validate | Required database secrets are defined"
+  ansible.builtin.assert:
+    that:
+      - vault_immich_db_password is defined
+      - vault_immich_db_password | length > 0
+      - vault_paperless_db_password is defined
+      - vault_paperless_db_password | length > 0
+    fail_msg: >-
+      Immich and Paperless require database passwords in secrets.yml.
+      See secrets.yml.example for the full list.
+    quiet: true
+
+- name: "Validate | NAS is reachable (NFS port)"
+  ansible.builtin.wait_for:
+    host: "{{ nas_ip }}"
+    port: 2049
+    timeout: 10
+  register: _nfs_check
+  ignore_errors: true
+
+- name: "Validate | NAS reachability result"
+  ansible.builtin.assert:
+    that: _nfs_check is success
+    fail_msg: >-
+      Cannot reach NAS at {{ nas_ip }}:2049 (NFS).
+      Verify the NAS is online and NFS shares are exported.
+    quiet: true
+
+- name: "Validate | Authentik remote backup prerequisites"
+  ansible.builtin.assert:
+    that:
+      - nas_backup_ssh_user | length > 0
+      - nas_backup_ssh_key_path | length > 0
+      - nas_backup_ssh_key_path is match('^/')
+    fail_msg: >-
+      enable_authentik_remote_backup requires nas_backup_ssh_user and an
+      absolute nas_backup_ssh_key_path. See RUNBOOK.md for details.
+    quiet: true
+  when: enable_authentik_remote_backup | default(false)

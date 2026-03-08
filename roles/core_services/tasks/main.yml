@@ -4,6 +4,11 @@
 # These services form the infrastructure backbone of the NAS stack.
 # ============================================================
 
+# --- PRE-FLIGHT: Validate config before touching infrastructure ---
+- name: "Core Services | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
 # --- PRE-FLIGHT: Docker network shared by all containers ---
 - name: "Global | Create proxy network"
   community.docker.docker_network:

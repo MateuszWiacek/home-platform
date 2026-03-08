@@ -1,13 +1,14 @@
-# Ansible Homelab — Runbook (Full Stack)
+# Platform Engineering at Home: Runbook
 
-Operational reference for the NAS core node.
-For architecture deep dive → [`ARCHITECTURE.md`](ARCHITECTURE.md)
-For quick deployment overview → [`README.md`](README.md)
+Operational reference for both nodes (NAS + Ryzen VM).
+For architecture deep dive: [`ARCHITECTURE.md`](ARCHITECTURE.md)
+For quick deployment overview: [`README.md`](README.md)
 
 ---
 
 ## Table of Contents
 
+- [Not a techie? Start here](#not-a-techie-start-here)
 - [If it's on fire (60 seconds)](#if-its-on-fire-60-seconds)
 - [Scope](#scope)
 - [Infrastructure](#infrastructure)
@@ -19,6 +20,34 @@ For quick deployment overview → [`README.md`](README.md)
 - [Ansible Gotchas](#ansible-gotchas)
 - [Go-live Smoke Checklist](#go-live-smoke-checklist)
 
+
+---
+
+## Not a techie? Start here
+
+If something stopped working and the usual admin is not around, try these steps in order.
+No terminal needed.
+
+**Step 1: Check the dashboard**
+Open [https://homepage.homelab.local](https://homepage.homelab.local) in your browser.
+If it loads, you can usually see which service is down.
+
+**Step 2: Restart a broken service via Portainer**
+1. Open [https://portainer.homelab.local](https://portainer.homelab.local)
+2. Log in
+3. Go to **Containers**
+4. Find the service that is broken (for example `jellyfin` or `vaultwarden`)
+5. Click **Restart**
+6. Wait 30 seconds, then try the service again
+
+**Step 3: Nothing works at all / dashboard is gone**
+The NAS (small box, always on) probably needs a restart:
+1. Physically restart the NAS
+2. Wait 3-5 minutes
+3. Try the dashboard again: [https://homepage.homelab.local](https://homepage.homelab.local)
+
+**Step 4: Still broken**
+Contact the person who maintains the stack. A photo of the error screen helps.
 
 ---
 
@@ -41,7 +70,7 @@ ssh <user>@10.0.0.10 "sudo docker logs --tail 200 authentik-worker"
 # 4) DNS sanity (AdGuard)
 dig +short authentik.<domain> @10.0.0.10
 
-# 5) ACME sanity (DNS-01) — use your real registered domain here
+# 5) ACME sanity (DNS-01) - use your real registered domain here
 dig TXT _acme-challenge.<domain> @1.1.1.1
 ```
 
@@ -148,6 +177,7 @@ python3 -m pip install --user ansible-lint yamllint
 
 ansible-playbook -i inventory.ini deploy_n100.yml --syntax-check
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --syntax-check
+ansible-playbook -i inventory.ini smoke_test.yml --syntax-check
 ansible-lint deploy_n100.yml
 ansible-lint deploy_docker_nodes.yml
 yamllint .
@@ -169,7 +199,7 @@ yamllint .
 
 ## Common Issues & Solutions
 
-### 1) AdGuard Home fails to start — port 53 already in use
+### 1) AdGuard Home fails to start: port 53 already in use
 
 **Symptom:** `failed to bind host port 0.0.0.0:53/tcp: address already in use`
 
@@ -208,14 +238,14 @@ ansible-playbook -i inventory.ini deploy_n100.yml --tags adguard
 
 ---
 
-### 3) Traefik fails to detect containers on Docker Engine 27+
+### 3) Traefik fails to detect containers on Docker Engine 29+
 
 **Symptom:** Services return 404. Traefik logs show:
-`client version 1.24 is too old. Minimum supported API version is 1.44`
+`client version 1.24 is too old. Minimum supported API version is 1.44, please upgrade your client to a newer version`
 
-**Cause:** `traefik:v3.0` is too old for newer Docker API.
+**Cause:** Docker 29.0 raised the minimum required API version from 1.24 to 1.44. Traefik v3.0-v3.5 had the API version hardcoded at 1.24 and crashes on startup with Docker 29+. Fixed in Traefik v3.6.1 (auto-negotiation, upstream PR #12256).
 
-**Fix:** Keep `traefik_version: "v3"` in `group_vars/n100.yml` and redeploy:
+**Fix:** Ensure `traefik_version` is `v3.6.1` or newer in `group_vars/n100.yml`, then redeploy. This public branch currently pins `v3.6.9`:
 ```bash
 ansible-playbook -i inventory.ini deploy_n100.yml --tags traefik
 ```
@@ -239,7 +269,7 @@ ansible-playbook -i inventory.ini deploy_n100.yml --tags traefik
 
 ---
 
-### 5) Fresh machine — module not found
+### 5) Fresh machine: module not found
 
 **Symptom:** `community.docker.*` or `ansible.posix.mount` modules unavailable.
 
@@ -287,7 +317,7 @@ ansible-playbook -i inventory.ini deploy_n100.yml --tags traefik
 
 ---
 
-### 8) Authentik Redis unhealthy — `Can't handle RDB format version`
+### 8) Authentik Redis unhealthy: `Can't handle RDB format version`
 
 **Symptom:** Authentik stack fails to start; Redis logs contain:
 `Can't handle RDB format version ...`
@@ -363,7 +393,7 @@ ssh <user>@10.0.0.10 "dmesg -T | grep -iE 'out of memory|killed process|oom' | t
 
 ## Engineering Notes
 
-### Traefik — `acme.json` path and permissions
+### Traefik: `acme.json` path and permissions
 
 - ACME storage must use absolute path `/acme.json` inside the container.
 - File permissions must be `0600` before Traefik starts or it may fall back to self-signed behavior.
@@ -375,20 +405,20 @@ ssh <user>@10.0.0.10 "sudo docker logs --tail 200 traefik | grep -iE 'acme|cert|
 
 ---
 
-### AdGuard Home — local DNS rewrites
+### AdGuard Home: local DNS rewrites
 
 For all LAN clients to route through NAS Traefik, configure a DNS rewrite in AdGuard Home:
 
 ```
-*.homelab.local → 10.0.0.10
+*.homelab.local -> 10.0.0.10
 ```
 
 Without this, clients may resolve to public IP and bypass the local path.
-VPN clients may override DNS — split-tunneling or custom DNS config may be required.
+VPN clients may override DNS, so split-tunneling or custom DNS config may be required.
 
 ---
 
-### Proxmox — Traefik reverse proxy + Authentik OIDC
+### Proxmox: Traefik reverse proxy + Authentik OIDC
 
 Traffic flow in this setup:
 
@@ -407,7 +437,7 @@ OIDC setup checklist:
 2. In Authentik, set Redirect URI exactly to `https://proxmox.homelab.local/` (note trailing slash).
 3. Configure Proxmox realm with the Authentik issuer/client.
 
-Common error: `Redirect URI mismatch` — compare Authentik redirect URI and what Proxmox sends byte-for-byte.
+Common error: `Redirect URI mismatch`. Compare Authentik redirect URI and what Proxmox sends byte-for-byte.
 
 Proxmox CLI example:
 ```bash
@@ -429,7 +459,7 @@ curl -vI https://proxmox.homelab.local
 
 ---
 
-### Authentik — worker permissions (`/media/public`)
+### Authentik: worker permissions (`/media/public`)
 
 Common failure: `authentik-worker` restart loop with permission errors.
 
@@ -442,7 +472,7 @@ ssh <user>@10.0.0.10 "sudo docker logs --tail 200 authentik-worker"
 
 ---
 
-### Authentik — PostgreSQL "too many clients"
+### Authentik: PostgreSQL "too many clients"
 
 During worker restart loops, connections can spike and exhaust Postgres defaults.
 
@@ -458,17 +488,17 @@ ssh <user>@10.0.0.10 "sudo docker exec -i authentik-db psql -U authentik -d auth
 
 ---
 
-### LDAP Outpost — dual-network requirement
+### LDAP Outpost: dual-network requirement
 
 LDAP outpost must attach to:
-- `default` network — to reach Authentik core
-- `proxy_net` — to reach Traefik/clients
+- `default` network: to reach Authentik core
+- `proxy_net`: to reach Traefik/clients
 
 Missing one produces routing/lookup errors that are hard to trace.
 
 ---
 
-### LDAP integration — Base DN exact match
+### LDAP integration: Base DN exact match
 
 If outpost logs show `No provider found for request`, check Base DN consistency.
 Use exactly the same normalized format everywhere (case differences can break matching):
@@ -479,7 +509,7 @@ dc=homelab,dc=local
 
 ---
 
-### LDAP integration — username appears as hash (TrueNAS/SSSD)
+### LDAP integration: username appears as hash (TrueNAS/SSSD)
 
 If username resolves as UUID-like values, map LDAP username to `cn`:
 
@@ -497,7 +527,7 @@ getent passwd <expected_username>
 
 ---
 
-### LDAP integration — operational checklist and diagnostics
+### LDAP integration: operational checklist and diagnostics
 
 Before deep debugging, verify:
 - Outpost is running and healthy.
@@ -532,7 +562,7 @@ sudo sss_cache -E
 
 ---
 
-### SSH hardening — verification
+### SSH hardening: verification
 
 ```bash
 # From your workstation: expected denied, no password fallback
@@ -542,14 +572,132 @@ ssh -o PubkeyAuthentication=no root@10.0.0.10
 ssh <user>@10.0.0.10
 sudo sshd -t
 ```
+---
+### Immich: pgvecto-rs to VectorChord migration
 
+Required when upgrading Immich from a version using `tensorchord/pgvecto-rs` to `ghcr.io/immich-app/postgres` (VectorChord). From Immich v2.x onwards, VectorChord is the official successor to pgvecto-rs.
+
+**If you have existing data (running Immich instance):**
+```bash
+# 1. Backup before anything else
+docker exec immich_postgres pg_dumpall -U immich > /tmp/immich_backup_pre_migration.sql
+
+# 2. Stop Immich (not the database)
+cd /opt/immich
+docker compose stop immich-server immich-machine-learning
+
+# 3. Update the postgres image in docker-compose.yml to:
+# ghcr.io/immich-app/postgres:14-vectorchord0.4.3
+# Via Ansible: update immich_postgres_image in group_vars/docker_nodes.yml and redeploy
+
+# 4. Restart only the database with the new image
+docker compose up -d postgres
+
+# 5. Run the migration
+docker exec -it immich_postgres psql -U immich -d immich -c "
+  ALTER EXTENSION vectors UPDATE;
+  SELECT pgvectors_migrate();
+"
+
+# 6. Start the rest of the stack
+docker compose up -d
+
+# 7. Check logs for errors
+docker logs immich_server --tail 50
+```
+
+**If this is a fresh install (no data):**
+```bash
+cd /opt/immich
+docker compose down -v   # removes database volumes - all data will be lost
+docker compose up -d     # initialises the database with VectorChord from scratch
+```
+
+---
+
+### Homepage widgets: Ryzen services use direct IP, not domain
+
+Homepage widgets for Immich and Paperless use direct Ryzen IP (`http://10.0.0.30:PORT`)
+instead of their public domains (`https://immich.homelab.local` and `https://paperless.homelab.local`).
+
+This is intentional. Homepage runs on the NAS and queries widget APIs server-side.
+Routing through the public domain would mean: NAS -> AdGuard DNS -> Traefik -> Ryzen,
+adding an unnecessary hop through the reverse proxy and a dependency on Traefik being
+healthy just to display widget data.
+
+Direct IP is faster, simpler, and survives a Traefik outage.
+
+---
+
+### Backup coverage
+
+The automated backup script (`backup_dbs.sh`) covers:
+
+| Database | Container | Method |
+|---|---|---|
+| Immich (Ryzen) | `immich_postgres` | Local `docker exec pg_dump` |
+| Paperless (Ryzen) | `paperless_db` | Local `docker exec pg_dump` |
+| Authentik (NAS) | `authentik-db` | Optional remote `pg_dump` via SSH |
+
+Backups run daily at 03:00 via cron, gzip-compressed to `/mnt/nas_fast_data/backups/db`.
+Default retention is 28 days (`db_backup_retention_days` in `roles/prod_apps/defaults/main.yml`).
+
+**Authentik backup is disabled by default.** Enable it only after the Ryzen node can:
+- SSH to the NAS non-interactively as a dedicated account
+- trust the NAS host key in `/root/.ssh/known_hosts`
+- run `sudo docker exec authentik-db pg_dump ...` on the NAS without a password prompt
+
+Required variables:
+```yaml
+# group_vars/docker_nodes.yml
+enable_authentik_remote_backup: true
+nas_backup_ssh_user: admin
+nas_backup_ssh_key_path: /root/.ssh/id_ed25519
+```
+
+**Not covered by the automated script (manual responsibility):**
+- **Vaultwarden**: back up `/mnt/example_apps/appdata/docker/config/vaultwarden/`. It contains the encrypted vault database and should be copied off-site periodically.
+- **Authentik media**: custom branding and icons. Low priority, but worth snapshotting.
+- **ZFS snapshots**: if you use TrueNAS snapshot tasks, they protect app configs and data pools independently.
+
+Verify backup health:
+```bash
+ls -lh /mnt/nas_fast_data/backups/db/ | tail -10
+cat /var/log/db_backups.log | tail -20
+```
+
+---
+
+### Docker log rotation (Ryzen node)
+
+Docker daemon on the Ryzen VM is configured with log rotation via `/etc/docker/daemon.json`:
+```json
+{
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "3"
+  }
+}
+```
+
+This limits each container's log to 3 files of 10 MB each (30 MB max per container).
+Without this, the default `json-file` driver has no size limit and will eventually fill disk.
+The playbook merges these keys into an existing `daemon.json` instead of overwriting unrelated Docker daemon settings.
+
+**NAS (TrueNAS SCALE):** Docker daemon is managed by TrueNAS. Log rotation is handled at the platform level. If logs grow unexpectedly, check:
+```bash
+ssh <user>@10.0.0.10 "sudo du -sh /var/lib/docker/containers/*/*.log | sort -rh | head -10"
+```
+
+---
 ---
 
 ## Ansible Gotchas
 
 **`import_tasks` vs `include_tasks`:**
-- `import_tasks` — static, tags work at import level, easier to debug
-- `include_tasks` — dynamic, useful with loops/conditions, tags must be repeated inside
+- `import_tasks`: static, tags work at import level, easier to debug
+- `include_tasks`: dynamic, useful with loops/conditions, tags must be repeated inside
 
 **`notify` + handlers:**
 - Handler runs once at end of play, even if notified multiple times
@@ -578,6 +726,7 @@ changed_when: result.rc == 0
 # Syntax check
 ansible-playbook -i inventory.ini deploy_n100.yml --syntax-check
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --syntax-check
+ansible-playbook -i inventory.ini smoke_test.yml --syntax-check
 
 # Dry run
 ansible-playbook -i inventory.ini deploy_n100.yml --check --diff
@@ -595,16 +744,21 @@ ssh <user>@10.0.0.30 "sudo docker ps --format '{{.Names}} {{.Status}}'"
 ssh <user>@10.0.0.10 "sudo docker inspect --format '{{.Name}} mem={{.HostConfig.Memory}}' traefik adguard vaultwarden portainer jellyfin homepage"
 ```
 
+Automated alternative (containers + DNS + ingress checks):
+```bash
+ansible-playbook -i inventory.ini smoke_test.yml
+```
+
 Manual checks:
-- [ ] `https://authentik.homelab.local` — Authentik login page loads
-- [ ] `https://adguard.homelab.local` — AdGuard Home UI accessible
-- [ ] `https://vaultwarden.homelab.local` — Vaultwarden loads
-- [ ] `https://portainer.homelab.local` — Portainer accessible
-- [ ] `https://homepage.homelab.local` — Homepage accessible
-- [ ] `https://jellyfin.homelab.local` — Jellyfin accessible
-- [ ] `https://immich.homelab.local` — Immich accessible
-- [ ] `https://paperless.homelab.local` — Paperless accessible
-- [ ] `https://nas.homelab.local` — TrueNAS UI accessible
-- [ ] `http://10.0.0.10:8090` — Traefik dashboard (LAN only)
+- [ ] `https://authentik.homelab.local` - Authentik login page loads
+- [ ] `https://adguard.homelab.local` - AdGuard Home UI accessible
+- [ ] `https://vaultwarden.homelab.local` - Vaultwarden loads
+- [ ] `https://portainer.homelab.local` - Portainer accessible
+- [ ] `https://homepage.homelab.local` - Homepage accessible
+- [ ] `https://jellyfin.homelab.local` - Jellyfin accessible
+- [ ] `https://immich.homelab.local` - Immich accessible
+- [ ] `https://paperless.homelab.local` - Paperless accessible
+- [ ] `https://nas.homelab.local` - TrueNAS UI accessible
+- [ ] `http://10.0.0.10:8090` - Traefik dashboard (LAN only)
 
 ---
