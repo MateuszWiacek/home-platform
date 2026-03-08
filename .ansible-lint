@@ -18,6 +18,9 @@ skip_list:
   - yaml[truthy]
   # Some role names use underscores (core_services, media_stack) — that's fine
   - role-name
+  # Variables in role defaults are intentionally shared via group_vars;
+  # enforcing per-role prefixes would break the entire variable naming scheme.
+  - var-naming[no-role-prefix]
 
 # Treat warnings as non-fatal during initial adoption
 warn_list:

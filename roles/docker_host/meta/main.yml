@@ -3,5 +3,7 @@
 # Target: Debian/Ubuntu hosts only — NOT TrueNAS SCALE
 
 galaxy_info:
-  author: homelab
+  author: MateuszWiacek
   description: Prepares a Debian/Ubuntu host as a Docker node
+  license: MIT
+  min_ansible_version: "2.14"
