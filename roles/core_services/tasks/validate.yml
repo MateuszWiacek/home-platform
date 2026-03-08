@@ -1,0 +1,46 @@
+---
+# ============================================================
+# PRE-FLIGHT VALIDATION
+# Fail fast before touching infrastructure if config is broken.
+# ============================================================
+
+- name: "Validate | Required secrets are defined (Cloudflare)"
+  ansible.builtin.assert:
+    that:
+      - cloudflare_token is defined
+      - cloudflare_token | length > 0
+      - cert_email is defined
+      - cert_email | length > 0
+    fail_msg: >-
+      Traefik requires cloudflare_token and cert_email in secrets.yml.
+      See secrets.yml.example for the full list.
+    quiet: true
+
+- name: "Validate | Required secrets are defined (Authentik)"
+  ansible.builtin.assert:
+    that:
+      - authentik_postgres_password is defined
+      - authentik_postgres_password | length > 0
+      - authentik_secret_key is defined
+      - authentik_secret_key | length > 0
+    fail_msg: >-
+      Authentik requires authentik_postgres_password and authentik_secret_key
+      in secrets.yml.
+    quiet: true
+
+- name: "Validate | Storage paths are accessible"
+  ansible.builtin.stat:
+    path: "{{ item }}"
+  register: _core_paths
+  loop:
+    - "{{ docker_config_dir | dirname }}"
+    - "{{ docker_data_dir | dirname }}"
+
+- name: "Validate | Storage paths exist"
+  ansible.builtin.assert:
+    that: item.stat.exists
+    fail_msg: "Required path does not exist: {{ item.item }}"
+    quiet: true
+  loop: "{{ _core_paths.results }}"
+  loop_control:
+    label: "{{ item.item }}"

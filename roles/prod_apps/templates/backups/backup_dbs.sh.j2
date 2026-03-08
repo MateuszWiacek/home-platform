@@ -4,20 +4,68 @@ set -euo pipefail
 BACKUP_DIR="{{ mnt_fast_data }}/backups/db"
 DATE=$(date +%F_%H-%M-%S)
 RETENTION_DAYS={{ db_backup_retention_days }}
+ERRORS=0
 
 mkdir -p "$BACKUP_DIR"
 
-echo "Starting Immich database backup..."
-docker exec {{ immich_db_container | default('immich_postgres') }} \
+{% if enable_authentik_remote_backup %}
+SSH_CMD=(
+  ssh
+  -o BatchMode=yes
+  -o ConnectTimeout=10
+  -o StrictHostKeyChecking=yes
+  -i "{{ nas_backup_ssh_key_path }}"
+)
+{% endif %}
+
+# --- Immich (runs on Ryzen) ---
+echo "[$(date '+%H:%M:%S')] Starting Immich database backup..."
+if docker exec {{ immich_db_container | default('immich_postgres') }} \
   pg_dump -U {{ vault_immich_db_user | default('immich') }} {{ vault_immich_db_name | default('immich') }} \
-  | gzip > "$BACKUP_DIR/immich_$DATE.sql.gz"
+  | gzip > "$BACKUP_DIR/immich_$DATE.sql.gz"; then
+  echo "[$(date '+%H:%M:%S')] Immich backup OK ($(du -h "$BACKUP_DIR/immich_$DATE.sql.gz" | cut -f1))"
+else
+  echo "[$(date '+%H:%M:%S')] ERROR: Immich backup failed!" >&2
+  ERRORS=$((ERRORS + 1))
+fi
 
-echo "Starting Paperless database backup..."
-docker exec {{ paperless_db_container | default('paperless_db') }} \
+# --- Paperless (runs on Ryzen) ---
+echo "[$(date '+%H:%M:%S')] Starting Paperless database backup..."
+if docker exec {{ paperless_db_container | default('paperless_db') }} \
   pg_dump -U {{ vault_paperless_db_user | default('paperless') }} {{ vault_paperless_db_name | default('paperless') }} \
-  | gzip > "$BACKUP_DIR/paperless_$DATE.sql.gz"
+  | gzip > "$BACKUP_DIR/paperless_$DATE.sql.gz"; then
+  echo "[$(date '+%H:%M:%S')] Paperless backup OK ($(du -h "$BACKUP_DIR/paperless_$DATE.sql.gz" | cut -f1))"
+else
+  echo "[$(date '+%H:%M:%S')] ERROR: Paperless backup failed!" >&2
+  ERRORS=$((ERRORS + 1))
+fi
 
-echo "Cleaning up old backups..."
+{% if enable_authentik_remote_backup %}
+# --- Authentik (runs on NAS — remote pg_dump via SSH) ---
+# SSO database is critical infrastructure. Without this backup, an Authentik
+# DB failure means rebuilding all providers, flows, and user bindings from scratch.
+# This path assumes root on the Ryzen node already has a trusted SSH key and
+# the NAS account can run the pg_dump command via passwordless sudo.
+echo "[$(date '+%H:%M:%S')] Starting Authentik database backup (remote — NAS)..."
+if "${SSH_CMD[@]}" "{{ nas_backup_ssh_user }}@{{ nas_ip }}" \
+  "sudo docker exec authentik-db pg_dump -U authentik authentik" \
+  | gzip > "$BACKUP_DIR/authentik_$DATE.sql.gz"; then
+  echo "[$(date '+%H:%M:%S')] Authentik backup OK ($(du -h "$BACKUP_DIR/authentik_$DATE.sql.gz" | cut -f1))"
+else
+  echo "[$(date '+%H:%M:%S')] ERROR: Authentik backup failed!" >&2
+  ERRORS=$((ERRORS + 1))
+fi
+{% else %}
+echo "[$(date '+%H:%M:%S')] Skipping Authentik backup (enable_authentik_remote_backup=false)."
+{% endif %}
+
+# --- Cleanup ---
+echo "[$(date '+%H:%M:%S')] Cleaning up backups older than ${RETENTION_DAYS} days..."
 find "$BACKUP_DIR" -type f -name "*.sql.gz" -mtime +"$RETENTION_DAYS" -delete
 
-echo "Backup completed."
+if [ "$ERRORS" -gt 0 ]; then
+  echo "[$(date '+%H:%M:%S')] Backup completed with $ERRORS error(s)!" >&2
+  exit 1
+else
+  echo "[$(date '+%H:%M:%S')] All backups completed successfully."
+fi

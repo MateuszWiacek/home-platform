@@ -33,3 +33,4 @@
   ansible.builtin.shell:
     cmd: "docker compose up -d --remove-orphans"
     chdir: "{{ docker_config_dir }}/homepage"
+  changed_when: false

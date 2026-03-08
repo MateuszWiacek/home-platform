@@ -6,12 +6,12 @@ ansible_become: true
 
 # === ZFS Paths (NAS local storage) ===
 # SSD Pool
-docker_root_dir: "/mnt/ssd_apps/appdata/docker"
+docker_root_dir: "/mnt/example_apps/appdata/docker"
 docker_config_dir: "{{ docker_root_dir }}/config"
 docker_data_dir: "{{ docker_root_dir }}/data"
 
 # HDD Pool
-media_root_dir: "/mnt/storage_1/media"
+media_root_dir: "/mnt/example_storage/media"
 
 # === Traefik compatibility (production/main naming & access) ===
 # Pin to v3.6.1+ — first release with auto-negotiated Docker API version.

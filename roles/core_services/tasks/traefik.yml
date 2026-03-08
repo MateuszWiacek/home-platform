@@ -42,3 +42,4 @@
   ansible.builtin.shell:
     cmd: "docker compose up -d --remove-orphans"
     chdir: "{{ docker_config_dir }}/traefik"
+  changed_when: false

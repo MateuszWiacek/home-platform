@@ -36,6 +36,10 @@ http:
         - "websecure"
       tls:
         certResolver: "myresolver"
+{% if enable_authentik_protection %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
 
     immich:
       rule: "Host(`{{ immich_domain }}`)"
@@ -44,6 +48,10 @@ http:
         - "websecure"
       tls:
         certResolver: "myresolver"
+{% if enable_authentik_protection %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
 {% endif %}
 
   services:
@@ -61,24 +69,16 @@ http:
 
 {% if enable_remote_apps_routes %}
     paperless:
-      rule: "Host(`{{ paperless_domain }}`)"
-      service: "paperless"
-      entryPoints:
-        - "websecure"
-      tls:
-        certResolver: "myresolver"
-      middlewares:
-        - authentik-auth
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ paperless_service_port }}"
+        passHostHeader: true
 
     immich:
-      rule: "Host(`{{ immich_domain }}`)"
-      service: "immich"
-      entryPoints:
-        - "websecure"
-      tls:
-        certResolver: "myresolver"
-      middlewares:
-        - authentik-auth
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ immich_service_port }}"
+        passHostHeader: true
 {% endif %}
 
   serversTransports:

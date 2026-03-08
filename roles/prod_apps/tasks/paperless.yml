@@ -38,6 +38,7 @@
     owner: "{{ app_uid }}"
     group: "{{ app_gid }}"
     mode: '0644'
+  notify: Restart Paperless
 
 - name: "Paperless | Deploy environment file"
   ansible.builtin.template:
@@ -47,13 +48,11 @@
     group: "{{ app_gid }}"
     mode: '0600'
   no_log: true
+  notify: Restart Paperless
 
-# 5. Launch the Paperless-ngx stack using Docker Compose V2
+# 5. Start the Paperless-ngx stack
 - name: "Paperless | Start containers"
-  community.docker.docker_compose_v2:
-    project_src: "{{ paperless_stack_dir }}"
-    state: present
-    files:
-      - docker-compose.yml
-    env_files:
-      - .env
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ paperless_stack_dir }}"
+  changed_when: false

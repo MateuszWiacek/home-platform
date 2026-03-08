@@ -1,4 +1,4 @@
-# HomeLab Architecture
+# Platform Engineering at Home: Architecture
 
 The "why" behind the stack. For incidents and day-2 procedures, go to [`RUNBOOK.md`](RUNBOOK.md).
 
@@ -14,8 +14,9 @@ The "why" behind the stack. For incidents and day-2 procedures, go to [`RUNBOOK.
 - [Trade-offs and Mitigations](#trade-offs-and-mitigations)
 - [Operational Targets](#operational-targets)
 - [Service Endpoints](#service-endpoints)
+- [Network Flow](#network-flow)
 - [Ansible Structure](#ansible-structure)
-- [Network, Philosophy & Other](#Network,-Philosophy-&-Other)
+- [Network, Philosophy & Other](#network-philosophy--other)
 
 ---
 
@@ -23,18 +24,18 @@ The "why" behind the stack. For incidents and day-2 procedures, go to [`RUNBOOK.
 
 The short version of what this file shows:
 
-- A homelab designed like a platform - DNS, TLS, identity as one coherent stack, not bolted-on services
+- A homelab designed like a platform: DNS, TLS, and identity as one coherent stack, not bolted-on services
 - Every decision documented with a reason. Not "I saw it on YouTube", but actual trade-off thinking
-- Storage split by workload type — ZFS on the NAS, NVMe for latency-sensitive paths
+- Storage split by workload type: ZFS on the NAS, NVMe for latency-sensitive paths
 - Ansible structure that scales: roles, group_vars, vault. Adding a new service is DNS + labels + a role
 
-If you want the operational side - how I recover from failures, what breaks first, what to check — that's in [`RUNBOOK.md`](RUNBOOK.md).
+If you want the operational side - how I recover from failures, what breaks first, what to check - that's in [`RUNBOOK.md`](RUNBOOK.md).
 
 ---
 
 ## Node Roles
 
-### Node 1 — NAS / Control Plane (Intel N100)
+### Node 1: NAS / Control Plane (Intel N100)
 
 | | |
 |---|---|
@@ -42,13 +43,13 @@ If you want the operational side - how I recover from failures, what breaks firs
 | **OS** | TrueNAS SCALE |
 | **Role** | 24/7 backbone: storage + DNS + ingress + identity |
 
-This box stays on. It's the control plane of the home network — DNS, TLS termination, SSO, storage. Low power by design.
+This box stays on. It's the control plane of the home network: DNS, TLS termination, SSO, and storage. Low power by design.
 
-ZFS stability is the constraint here. Containers are capped with memory limits and I verify the caps via `docker inspect … HostConfig.Memory`. ZFS ARC doesn't care about your app spike.
+ZFS stability is the constraint here. Containers are capped with memory limits and I verify the caps via `docker inspect ... HostConfig.Memory`. ZFS ARC doesn't care about your app spike.
 
-Jellyfin lives here on purpose: Intel Quick Sync makes transcoding cheap and predictable, even 4K → 1080p.
+Jellyfin lives here on purpose: Intel Quick Sync makes transcoding cheap and predictable, even 4K to 1080p.
 
-### Node 2 — Compute Lane (AMD Ryzen 5 6600H)
+### Node 2: Compute Lane (AMD Ryzen 5 6600H)
 
 | | |
 |---|---|
@@ -108,7 +109,7 @@ Immich and Paperless-ngx are not NAS-friendly. AI inference, OCR, and Postgres d
 
 ## Trade-offs and Mitigations
 
-Things I consciously accept. Not a threats list — a list of known costs with mitigations.
+Things I consciously accept. Not a threats list, just a list of known costs with mitigations.
 
 | Trade-off | Benefit | Cost | Mitigation |
 |---|---|---|---|
@@ -116,7 +117,7 @@ Things I consciously accept. Not a threats list — a list of known costs with m
 | **Internal DNS as critical infra** | Clean URLs, no port memorization | DNS down = "everything's broken" from a user's perspective | Fallback resolver on router; IP access still works |
 | **DNS-01 for certs** | Valid LAN certs, no open ports | DNS API dependency, rate limits | Minimal-scope token, rotation, runbook steps |
 | **Reverse proxy as choke point** | One TLS/routing layer | Bad config breaks multiple services at once | Config in code, quick rollback |
-| **GUI tools (Portainer)** | Fast admin from phone | Drift risk if changes bypass Ansible | GUI is an ops console only — changes get backported to code |
+| **GUI tools (Portainer)** | Fast admin from phone | Drift risk if changes bypass Ansible | GUI is an ops console only; changes get backported to code |
 | **`latest` tags during bootstrap** | Faster initial rollout | An update can surprise you | Pin after stabilization; version bumps go through changelog |
 
 > Rule: if recovery is harder than purity, purity loses.
@@ -127,13 +128,13 @@ Things I consciously accept. Not a threats list — a list of known costs with m
 
 - **N100** online 24/7. Ryzen VM stoppable without affecting core services.
 - **ZFS ARC** target ~4.7 GiB. Container memory caps enforced and verified.
-- **DB and AI cache** on Ryzen NVMe — no 1Gbit roundtrip per query.
+- **DB and AI cache** on Ryzen NVMe: no 1Gbit roundtrip per query.
 
 ---
 
 ## Service Endpoints
 
-Everything behind Traefik, HTTPS via Cloudflare DNS-01. No inbound ports. Traefik dashboard is LAN-only.
+User-facing web services sit behind Traefik, use HTTPS via Cloudflare DNS-01, and do not require inbound router ports. The Traefik dashboard is LAN-only.
 
 | Service | URL | Node |
 |---|---|---|
@@ -147,9 +148,54 @@ Everything behind Traefik, HTTPS via Cloudflare DNS-01. No inbound ports. Traefi
 | Immich | `https://immich.<domain>` | Ryzen VM |
 | Paperless-ngx | `https://paperless.<domain>` | Ryzen VM |
 | TrueNAS UI | `https://nas.<domain>` | NAS |
-| Proxmox | `https://proxmox.<domain>` | NAS → Proxmox |
+| Proxmox | `https://proxmox.<domain>` | NAS -> Proxmox |
 
-Immich and Paperless-ngx run on the Ryzen VM but route through NAS Traefik via file provider — Docker socket provider only sees local containers.
+Immich and Paperless-ngx run on the Ryzen VM but route through NAS Traefik via file provider. Docker socket provider only sees local containers.
+
+---
+
+## Network Flow
+
+Traffic path from client to service:
+
+```text
+                    ┌───────────────┐
+Client (LAN/WiFi) ->│ AdGuard (DNS) │ -> resolves service.<domain> -> <nas-ip>
+                    └──────┬────────┘
+                           │
+                           v
+                    ┌───────────────┐
+                    │ Traefik (TLS) │  Cloudflare DNS-01 -> valid certs on LAN
+                    └──────┬────────┘
+                           │ ForwardAuth (optional per-service)
+                           v
+                    ┌───────────────┐
+                    │  Authentik    │  SSO + policies
+                    └──────┬────────┘
+                           │
+          ┌────────────────┴────────────────┐
+          v                                 v
+   NAS-local apps                      Ryzen VM apps
+ (Vaultwarden, Jellyfin, etc.)        (Immich, Paperless, DBs)
+```
+
+Two nodes, split by responsibility and power profile:
+
+```text
+┌─────────────────────────────────┐     ┌──────────────────────────────────┐
+│         NAS - Intel N100        │     │       Compute - Ryzen 5 6600H    │
+│         TrueNAS SCALE           │     │       Debian VM on Proxmox       │
+│                                 │     │                                  │
+│  Traefik    AdGuard Home        │     │  Immich       Paperless-ngx      │
+│  Authentik  Vaultwarden         │<----│  PostgreSQL   AI model cache     │
+│  Jellyfin   Homepage            │ NFS │                                  │
+│  Portainer                      │     │  Heavy CPU/RAM workloads         │
+│                                 │     │  Local NVMe for DB/cache data    │
+│  24/7, low power, ZFS storage   │     │                                  │
+└─────────────────────────────────┘     └──────────────────────────────────┘
+```
+
+The important implementation detail is that Ryzen-hosted apps do not rely on the Docker socket provider. They are exposed by Traefik's file provider, using `ryzen_ip`, `immich_service_port`, and `paperless_service_port` from `group_vars/all.yml`.
 
 ---
 
@@ -161,7 +207,7 @@ roles/
 ├── media_stack/     # Jellyfin, Homepage
 ├── prod_apps/       # Immich, Paperless-ngx, DB backups
 ├── common/          # APT baseline, qemu-guest-agent
-├── ssh_hardening/   # Shared SSH policy — both nodes
+├── ssh_hardening/   # Shared SSH policy, both nodes
 └── docker_host/     # Docker engine, Portainer Agent
 ```
 
@@ -171,17 +217,17 @@ group_vars/
 ├── n100.yml              # NAS-specific: paths, versions, compatibility toggles
 └── docker_nodes.yml      # Ryzen: Docker user, NFS mounts, node-specific values
 
-secrets.yml               # Vault: tokens, passwords, API keys — never in git
+secrets.yml               # Vault: tokens, passwords, API keys; never in git
 ```
 
-Roles are independently deployable via tags. IPs, domains, versions → `group_vars`. Credentials → `secrets.yml` (vault).
+Roles are independently deployable via tags. IPs, domains, and versions live in `group_vars`. Credentials live in `secrets.yml` (vault).
 
 
 ## Network, Philosophy & Other
 
-If you made it here, you’re either **really interested** (respect) or **really bored** 😄
+If you made it here, you're either **really interested** or **really bored**.
 
-This is the least formal part of the document — a small Easter egg with some personality and the thinking behind how I organize things.
+This is the least formal part of the document: a small Easter egg with some personality and the thinking behind how I organize things.
 
 Like many software geeks, I like Easter eggs. This is mine.
 
@@ -189,7 +235,7 @@ Like many software geeks, I like Easter eggs. This is mine.
 
 ### First: the network part (because I promised)
 
-I don’t include a full network topology in this repo, because that is not the main scope of this homelab documentation.
+I don't include a full network topology in this repo, because that is not the main scope of this homelab documentation.
 
 I **do** want to show how I organize things, because once you run a multi-node environment at home, structure stops being optional.
 
@@ -211,20 +257,20 @@ For me, **IP address organization is critical** as the environment grows.
 
 ### Example network organization (example, not a rule)
 
-Use IP ranges with intent, so you don’t need to scan the network and guess what is what.
+Use IP ranges with intent, so you don't need to scan the network and guess what is what.
 
-- **Critical services** → `192.168.1.2–10`  
+- **Critical services** -> `10.0.0.2-10`
   Easy to remember, easy to reach.
 
-- **VMs / servers** → `192.168.1.11–30` (expand later if needed)  
+- **VMs / servers** -> `10.0.0.11-30` (expand later if needed)
   As the number of machines grows, this reduces mental overhead.
 
-- **Printers / infrastructure-like devices** → `192.168.1.90–99`
+- **Printers / infrastructure-like devices** -> `10.0.0.90-99`
 
-- **DHCP clients** (laptops, phones, random devices) → `192.168.1.100–254`  
-  Controlled chaos 😄
+- **DHCP clients** (laptops, phones, random devices) -> `10.0.0.100-254`
+  Controlled chaos.
 
-You can organize it differently — this is simply the pattern I use to keep things readable and predictable.
+You can organize it differently. This is simply the pattern I use to keep things readable and predictable.
 
 ---
 
@@ -238,9 +284,9 @@ I keep all IoT devices (robot vacuum, air purifiers, smart bulbs, etc.) in a **s
 **Principle:** segment what you do not fully trust  
 **Trade-off:** more configuration, but the security and clarity are worth it
 
-Also, I’d rather not have my *too smart* vacuum anywhere near Proxmox 😄
+Also, I'd rather not have my *too smart* vacuum anywhere near Proxmox.
 
-I’m a big fan of **segmentation and security**, and IoT vendors are… let’s say… not exactly famous for security engineering.
+I'm a big fan of **segmentation and security**, and IoT vendors are... let's say... not exactly famous for security engineering.
 
 ---
 
@@ -250,14 +296,14 @@ I’m a big fan of **segmentation and security**, and IoT vendors are… let’s
 Because many people leave early (fair enough).
 
 **Why not `runbook`?**  
-Because runbooks are for operations — usually when something is on fire and you need clear steps, not side notes.
+Because runbooks are for operations, usually when something is on fire and you need clear steps, not side notes.
 
 `Architecture` is the right place for this.
 
 At the end of the day, **who we are as engineers shows in how we design systems**.  
 This section is both a practical note and a small Easter egg.
 
-And yes — it’s **my document**, so I decide 😄
+And yes, it's **my document**, so I decide.
 
 ---
 
@@ -267,13 +313,13 @@ This repo reflects what I run at home **today**, but it will evolve naturally ov
 
 I like experimenting, and I already have more ideas than time (including a future OPNsense-based firewall setup).
 
-At the same time, as of **February 2026**, I need to keep a healthy balance:
+At the same time, as of **March 2026**, I need to keep a healthy balance:
 
 - I do similar work professionally at a much bigger scale
 - I genuinely enjoy tinkering
 - I do not want to burn out and lose that enjoyment
 
-Even with AI (which I’ve been using and experimenting with since 2022) — and yes, I treat it as an **exoskeleton / force multiplier** — balance still matters.
+Even with AI (which I've been using and experimenting with since 2022), and yes, I treat it as an **exoskeleton / force multiplier**, balance still matters.
 
 ---
 
@@ -287,6 +333,4 @@ If you got this far and you:
 - want to request something (maybe hosting some software in a homelab)
 - or just want to talk like two geeks
 
-you can reach me at:
-
-`<myname><mysurname>92@<email from 8.8.8.8 guys>`
+can open an issue or reach out via LinkedIn.

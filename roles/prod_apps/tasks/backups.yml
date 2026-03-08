@@ -4,6 +4,12 @@
     name: cron
     state: present
 
+- name: "Backups | Install SSH client for optional remote backups"
+  ansible.builtin.apt:
+    name: openssh-client
+    state: present
+  when: enable_authentik_remote_backup
+
 - name: "Backups | Ensure cron service is running"
   ansible.builtin.service:
     name: cron
@@ -17,6 +23,20 @@
     owner: "{{ app_uid }}"
     group: "{{ app_gid }}"
     mode: '0755'
+
+- name: "Backups | Validate remote Authentik backup prerequisites"
+  ansible.builtin.assert:
+    that:
+      - nas_backup_ssh_user | length > 0
+      - nas_backup_ssh_key_path | length > 0
+      - nas_backup_ssh_key_path is match('^/')
+    fail_msg: >-
+      enable_authentik_remote_backup requires nas_backup_ssh_user and an
+      absolute nas_backup_ssh_key_path (for example /root/.ssh/id_ed25519).
+      The NAS host key must already exist in root's known_hosts and the NAS
+      account must be allowed to run the Authentik pg_dump command via sudo
+      without a password prompt.
+  when: enable_authentik_remote_backup
 
 - name: "Backups | Deploy database backup script"
   ansible.builtin.template:
