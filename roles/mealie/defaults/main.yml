@@ -1,0 +1,5 @@
+---
+mealie_version: "latest"
+mealie_stack_dir: "{{ app_stacks_root | default('/opt') }}/mealie"
+mealie_data_dir: "{{ mealie_stack_dir }}/data"
+mealie_memory_limit: "512M"

@@ -1,0 +1,42 @@
+---
+# ============================================================
+# SIYUAN: Self-hosted knowledge base / note-taking
+# Standalone app, no database or NFS dependency.
+# ============================================================
+
+- name: "SiYuan | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "SiYuan | Ensure stack directory"
+  ansible.builtin.file:
+    path: "{{ siyuan_stack_dir }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+
+- name: "SiYuan | Ensure workspace directory"
+  ansible.builtin.file:
+    path: "{{ siyuan_workspace_dir }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+
+- name: "SiYuan | Deploy docker-compose file"
+  ansible.builtin.template:
+    src: "siyuan/docker-compose.yml.j2"
+    dest: "{{ siyuan_stack_dir }}/docker-compose.yml"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0600'
+  no_log: true
+  notify: Restart SiYuan
+
+- name: "SiYuan | Start containers"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ siyuan_stack_dir }}"
+  changed_when: false
+  when: not ansible_check_mode

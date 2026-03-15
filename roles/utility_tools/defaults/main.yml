@@ -1,0 +1,10 @@
+---
+# Stirling-PDF
+utility_tools_root: "{{ app_stacks_root | default('/opt') }}"
+stirling_pdf_version: "latest"
+stirling_pdf_stack_dir: "{{ utility_tools_root }}/stirling-pdf"
+stirling_pdf_memory_limit: "2G"
+
+# IT-Tools
+it_tools_version: "latest"
+it_tools_stack_dir: "{{ utility_tools_root }}/it-tools"

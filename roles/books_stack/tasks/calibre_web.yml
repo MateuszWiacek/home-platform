@@ -1,0 +1,32 @@
+---
+- name: "Calibre-Web | Ensure stack directory"
+  ansible.builtin.file:
+    path: "{{ calibre_web_stack_dir }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+
+- name: "Calibre-Web | Ensure config directory exists"
+  ansible.builtin.file:
+    path: "{{ calibre_web_config_dir }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+
+- name: "Calibre-Web | Deploy docker-compose file"
+  ansible.builtin.template:
+    src: "calibre-web/docker-compose.yml.j2"
+    dest: "{{ calibre_web_stack_dir }}/docker-compose.yml"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0644'
+  notify: Restart Calibre-Web
+
+- name: "Calibre-Web | Start containers"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ calibre_web_stack_dir }}"
+  changed_when: false
+  when: not ansible_check_mode

@@ -1,0 +1,63 @@
+---
+# ============================================================
+# SYNCTHING: Peer-to-peer file synchronization
+# Depends on NFS media mount from prod_apps role.
+# ============================================================
+
+- name: "Syncthing | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "Syncthing | Verify NFS media mount is active"
+  ansible.builtin.command:
+    cmd: "findmnt --noheadings --output FSTYPE {{ mnt_media }}"
+  register: _syncthing_nfs_check
+  changed_when: false
+  failed_when: >-
+    _syncthing_nfs_check.rc != 0 or
+    'nfs' not in _syncthing_nfs_check.stdout
+
+- name: "Syncthing | Check sync directory on NFS"
+  ansible.builtin.stat:
+    path: "{{ syncthing_sync_dir }}"
+  register: _syncthing_sync_dir
+
+- name: "Syncthing | Assert sync directory exists"
+  ansible.builtin.assert:
+    that:
+      - _syncthing_sync_dir.stat.exists
+      - _syncthing_sync_dir.stat.isdir
+    fail_msg: "Expected Syncthing library path {{ syncthing_sync_dir }} is missing on the mounted NAS media share."
+    quiet: true
+
+- name: "Syncthing | Ensure stack directory exists"
+  ansible.builtin.file:
+    path: "{{ syncthing_stack_dir }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+
+- name: "Syncthing | Ensure config directory exists"
+  ansible.builtin.file:
+    path: "{{ syncthing_config_dir }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0700'
+
+- name: "Syncthing | Deploy docker-compose file"
+  ansible.builtin.template:
+    src: "syncthing/docker-compose.yml.j2"
+    dest: "{{ syncthing_stack_dir }}/docker-compose.yml"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0644'
+  notify: Restart Syncthing
+
+- name: "Syncthing | Start containers"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ syncthing_stack_dir }}"
+  changed_when: false
+  when: not ansible_check_mode

@@ -4,7 +4,7 @@ ansible_user: admin
 ansible_ssh_private_key_file: ~/.ssh/id_ed25519
 
 # === Docker host ===
-portainer_agent_version: "latest"
+portainer_agent_version: "2.33.7"
 
 # === NFS Source Paths (what TrueNAS exports) ===
 nas_source_config: "/mnt/example_apps/appdata/docker/config"
@@ -21,13 +21,28 @@ mnt_docs: "/mnt/nas_documents"
 mnt_media: "/mnt/nas_media"
 
 # === Production app versions ===
-# Use latest only for initial bootstrap when stable versions are not yet known.
-# After validation, pin exact tags for reproducible deploys.
+# Prefer exact human-readable tags in the public branch.
+# Immich stays on `release` here because the same version var is used for two
+# different repositories with different tags.
 immich_version: "release"
-paperless_version: "latest"
+paperless_version: "2.20.7"
+stirling_pdf_version: "2.7.2"
+it_tools_version: "2024.10.22-7ca5933"
+navidrome_version: "0.60.3"
+audiobookshelf_version: "2.33.0"
+calibre_web_version: "0.6.26-ls373"
+siyuan_version: "v3.6.0"
+excalidraw_version: "latest"
+mealie_version: "v3.12.0"
+syncthing_version: "v2.0.15-ls211"
+linkwarden_version: "v2.13.5"
+linkwarden_postgres_image: "docker.io/library/postgres:16-alpine"
 
 # Internal dependencies (override only if required)
-immich_postgres_image: "ghcr.io/immich-app/postgres:14-vectorchord0.4.3"
+# WARNING: pgvecto-rs is deprecated for Immich v2.x+.
+# After migrating data, update to: ghcr.io/immich-app/postgres:14-vectorchord0.4.3
+# Migration steps: see docs/setup/COMMON_ISSUES.md -> "Immich: pgvecto-rs -> VectorChord migration"
+immich_postgres_image: "tensorchord/pgvecto-rs:pg14-v0.2.0"
 immich_redis_image: "redis:6.2-alpine"
 paperless_postgres_image: "docker.io/library/postgres:16-alpine"
 paperless_redis_image: "docker.io/library/redis:7-alpine"

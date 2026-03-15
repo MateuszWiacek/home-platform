@@ -1,0 +1,21 @@
+services:
+  mealie:
+    image: ghcr.io/mealie-recipes/mealie:{{ mealie_version }}
+    container_name: mealie
+    restart: unless-stopped
+    ports:
+      - "{{ mealie_service_port }}:9000"
+    environment:
+      - PUID={{ app_uid }}
+      - PGID={{ app_gid }}
+      - TZ={{ timezone }}
+      - BASE_URL=https://{{ mealie_domain }}
+      - ALLOW_SIGNUP=false
+      - DB_ENGINE=sqlite
+    volumes:
+      - {{ mealie_data_dir }}:/app/data
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: {{ mealie_memory_limit }}

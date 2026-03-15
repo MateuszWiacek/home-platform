@@ -1,0 +1,77 @@
+---
+# ============================================================
+# BOOKS STACK: Audiobookshelf, Calibre-Web
+# Optional media library services backed by the NAS NFS media mount.
+# ============================================================
+
+- name: "Books Stack | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "Books Stack | Verify NFS media mount is active"
+  ansible.builtin.command:
+    cmd: "findmnt --noheadings --output FSTYPE {{ mnt_media }}"
+  register: _books_nfs_check
+  changed_when: false
+  failed_when: >-
+    _books_nfs_check.rc != 0 or
+    'nfs' not in _books_nfs_check.stdout
+
+- name: "Books Stack | Check audiobooks library directory"
+  ansible.builtin.stat:
+    path: "{{ audiobooks_library_dir }}"
+  register: _audiobooks_library
+  when: audiobookshelf_enabled | bool
+
+- name: "Books Stack | Assert audiobooks library directory exists"
+  ansible.builtin.assert:
+    that:
+      - _audiobooks_library.stat.exists
+      - _audiobooks_library.stat.isdir
+    fail_msg: "Expected audiobooks library path {{ audiobooks_library_dir }} is missing on the mounted NAS media share."
+    quiet: true
+  when: audiobookshelf_enabled | bool
+
+- name: "Books Stack | Check podcasts library directory"
+  ansible.builtin.stat:
+    path: "{{ podcasts_library_dir }}"
+  register: _podcasts_library
+  when:
+    - audiobookshelf_enabled | bool
+    - podcasts_library_dir | length > 0
+
+- name: "Books Stack | Assert podcasts library directory exists"
+  ansible.builtin.assert:
+    that:
+      - _podcasts_library.stat.exists
+      - _podcasts_library.stat.isdir
+    fail_msg: "Expected podcasts library path {{ podcasts_library_dir }} is missing on the mounted NAS media share."
+    quiet: true
+  when:
+    - audiobookshelf_enabled | bool
+    - podcasts_library_dir | length > 0
+
+- name: "Books Stack | Check ebooks library directory"
+  ansible.builtin.stat:
+    path: "{{ ebooks_library_dir }}"
+  register: _ebooks_library
+  when: calibre_web_enabled | bool
+
+- name: "Books Stack | Assert ebooks library directory exists"
+  ansible.builtin.assert:
+    that:
+      - _ebooks_library.stat.exists
+      - _ebooks_library.stat.isdir
+    fail_msg: "Expected ebooks library path {{ ebooks_library_dir }} is missing on the mounted NAS media share."
+    quiet: true
+  when: calibre_web_enabled | bool
+
+- name: "Books Stack | Deploy Audiobookshelf"
+  ansible.builtin.import_tasks: audiobookshelf.yml
+  tags: [audiobookshelf]
+  when: audiobookshelf_enabled | bool
+
+- name: "Books Stack | Deploy Calibre-Web"
+  ansible.builtin.import_tasks: calibre_web.yml
+  tags: [calibre_web]
+  when: calibre_web_enabled | bool

@@ -1,0 +1,23 @@
+---
+services:
+  navidrome:
+    image: deluan/navidrome:{{ navidrome_version }}
+    container_name: navidrome
+    restart: unless-stopped
+    user: "{{ app_uid }}:{{ app_gid }}"
+    ports:
+      - "{{ navidrome_service_port }}:4533"
+    environment:
+      ND_SCANSCHEDULE: "1h"
+      ND_LOGLEVEL: "info"
+      ND_BASEURL: ""
+      ND_ENABLEINSIGHTSCOLLECTOR: "false"
+      TZ: "{{ timezone }}"
+    volumes:
+      - {{ navidrome_data_dir }}:/data
+      - {{ navidrome_music_dir }}:/music:ro
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: {{ navidrome_memory_limit }}

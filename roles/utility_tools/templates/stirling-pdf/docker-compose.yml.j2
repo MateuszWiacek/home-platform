@@ -1,0 +1,18 @@
+services:
+  stirling-pdf:
+    image: stirlingtools/stirling-pdf:{{ stirling_pdf_version }}
+    container_name: stirling_pdf
+    restart: unless-stopped
+    ports:
+      - "{{ stirling_pdf_service_port }}:8080"
+    environment:
+      - DOCKER_ENABLE_SECURITY=false
+      - SYSTEM_DEFAULTLOCALE=en_US
+    volumes:
+      - {{ stirling_pdf_stack_dir }}/data:/usr/share/tessdata
+      - {{ stirling_pdf_stack_dir }}/configs:/configs
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: {{ stirling_pdf_memory_limit }}

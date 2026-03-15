@@ -34,7 +34,7 @@ services:
       - "traefik.http.routers.adguard.entrypoints=websecure"
       - "traefik.http.routers.adguard.tls.certresolver=myresolver"
       - "traefik.http.services.adguard.loadbalancer.server.port=80"
-{% if enable_authentik_protection %}
+{% if adguard_auth_mode == 'forwardauth' %}
       - "traefik.http.routers.adguard.middlewares=authentik-auth@file"
 {% endif %}
     deploy:

@@ -16,6 +16,13 @@
           key: "{{ truenas_api_key }}"
           verify: false
 {% endif %}
+{% if syncthing_enabled | default(false) %}
+
+    - Syncthing:
+        icon: syncthing.png
+        href: "https://{{ syncthing_domain }}"
+        description: "File Synchronization"
+{% endif %}
 
 - Security & Identity:
     - Authentik:
@@ -33,6 +40,16 @@
         icon: adguard-home.png
         href: "https://{{ adguard_domain }}"
         description: "Network-wide DNS protection"
+
+    - Vaultwarden:
+        icon: vaultwarden.png
+        href: "https://{{ vaultwarden_domain }}"
+        description: "Password Vault"
+
+    - Portainer:
+        icon: portainer.png
+        href: "https://{{ portainer_domain }}"
+        description: "Container Management"
 - Media & Docs:
     - Jellyfin:
         icon: jellyfin.png
@@ -45,6 +62,45 @@
           key: "{{ jellyfin_api_key }}"
           enableBlocks: true
 {% endif %}
+
+    - Navidrome:
+        icon: navidrome.png
+        href: "https://{{ navidrome_domain }}"
+        description: "Music Streaming"
+{% if audiobookshelf_enabled | default(false) %}
+
+    - Audiobookshelf:
+        icon: audiobookshelf.png
+        href: "https://{{ audiobookshelf_domain }}"
+        description: "Audiobooks & Podcasts"
+{% endif %}
+{% if calibre_web_enabled | default(false) %}
+
+    - Calibre-Web:
+        icon: calibre-web.png
+        href: "https://{{ calibre_web_domain }}"
+        description: "Ebook Library"
+{% endif %}
+
+    - SiYuan:
+        icon: siyuan.png
+        href: "https://{{ siyuan_domain }}"
+        description: "Knowledge Base & Notes"
+
+    - Excalidraw:
+        icon: excalidraw.png
+        href: "https://{{ excalidraw_domain }}"
+        description: "Collaborative Whiteboard"
+
+    - Mealie:
+        icon: mealie.png
+        href: "https://{{ mealie_domain }}"
+        description: "Recipe Manager"
+
+    - Linkwarden:
+        icon: linkwarden.png
+        href: "https://{{ linkwarden_domain }}"
+        description: "Bookmark Archive"
 
     - Immich:
         icon: immich.png
@@ -76,3 +132,14 @@
         widget:
           type: traefik
           url: "{{ traefik_internal_url }}"
+
+- Utility Tools:
+    - Stirling-PDF:
+        icon: stirling-pdf.png
+        href: "https://{{ stirling_pdf_domain }}"
+        description: "PDF Toolbox"
+
+    - IT-Tools:
+        icon: it-tools.png
+        href: "https://{{ it_tools_domain }}"
+        description: "Developer & Admin Utilities"

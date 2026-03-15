@@ -1,0 +1,15 @@
+services:
+  excalidraw:
+    image: excalidraw/excalidraw:{{ excalidraw_version }}
+    container_name: excalidraw
+    restart: unless-stopped
+    ports:
+      - "{{ excalidraw_service_port }}:80"
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: {{ excalidraw_memory_limit }}

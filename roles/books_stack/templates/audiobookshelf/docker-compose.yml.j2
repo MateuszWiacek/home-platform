@@ -1,0 +1,23 @@
+services:
+  audiobookshelf:
+    image: ghcr.io/advplyr/audiobookshelf:{{ audiobookshelf_version }}
+    container_name: audiobookshelf
+    restart: unless-stopped
+    ports:
+      - "{{ audiobookshelf_service_port }}:80"
+    environment:
+      - TZ={{ timezone }}
+    volumes:
+      # Libraries on NAS HDD pool via NFS
+      - {{ audiobooks_library_dir }}:/audiobooks
+{% if podcasts_library_dir | length > 0 %}
+      - {{ podcasts_library_dir }}:/podcasts
+{% endif %}
+      # App config and metadata on local NVMe for performance
+      - {{ audiobookshelf_config_dir }}:/config
+      - {{ audiobookshelf_metadata_dir }}:/metadata
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: {{ audiobookshelf_memory_limit }}

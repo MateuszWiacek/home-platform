@@ -1,0 +1,33 @@
+---
+# ============================================================
+# EXCALIDRAW: Self-hosted collaborative whiteboard
+# Stateless app, no database or persistent storage required.
+# ============================================================
+
+- name: "Excalidraw | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "Excalidraw | Ensure stack directory"
+  ansible.builtin.file:
+    path: "{{ excalidraw_stack_dir }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+
+- name: "Excalidraw | Deploy docker-compose file"
+  ansible.builtin.template:
+    src: "excalidraw/docker-compose.yml.j2"
+    dest: "{{ excalidraw_stack_dir }}/docker-compose.yml"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0644'
+  notify: Restart Excalidraw
+
+- name: "Excalidraw | Start containers"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ excalidraw_stack_dir }}"
+  changed_when: false
+  when: not ansible_check_mode

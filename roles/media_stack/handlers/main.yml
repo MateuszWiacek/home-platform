@@ -3,8 +3,10 @@
   ansible.builtin.shell:
     cmd: "docker compose up -d --remove-orphans"
     chdir: "{{ docker_config_dir }}/homepage"
+  when: not ansible_check_mode
 
 - name: Restart Jellyfin
   ansible.builtin.shell:
     cmd: "docker compose up -d --remove-orphans"
     chdir: "{{ docker_config_dir }}/jellyfin"
+  when: not ansible_check_mode

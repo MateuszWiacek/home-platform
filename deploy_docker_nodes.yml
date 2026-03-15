@@ -16,3 +16,20 @@
       tags: ['docker']
     - role: prod_apps
       tags: ['prod_apps']
+    - role: utility_tools
+      tags: ['utility_tools']
+    - role: navidrome
+      tags: ['navidrome']
+    - role: books_stack
+      tags: ['books_stack']
+    - role: siyuan
+      tags: ['siyuan']
+    - role: excalidraw
+      tags: ['excalidraw']
+    - role: mealie
+      tags: ['mealie']
+    - role: syncthing
+      tags: ['syncthing']
+      when: syncthing_enabled | default(false)
+    - role: linkwarden
+      tags: ['linkwarden']

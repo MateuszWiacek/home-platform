@@ -1,0 +1,12 @@
+---
+syncthing_version: "latest"
+syncthing_stack_dir: "{{ app_stacks_root | default('/opt') }}/syncthing"
+syncthing_config_dir: "{{ syncthing_stack_dir }}/config"
+syncthing_memory_limit: "512M"
+
+# Sync protocol ports (must be reachable from other devices)
+syncthing_sync_port: 22000
+syncthing_discovery_port: 21027
+
+# Default sync folder on NAS via NFS
+syncthing_sync_dir: "{{ mnt_media }}/sync"

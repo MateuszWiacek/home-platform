@@ -1,0 +1,8 @@
+---
+linkwarden_version: "latest"
+linkwarden_stack_dir: "{{ app_stacks_root | default('/opt') }}/linkwarden"
+linkwarden_db_dir: "{{ linkwarden_stack_dir }}/postgres"
+linkwarden_data_dir: "{{ linkwarden_stack_dir }}/data"
+linkwarden_postgres_image: "docker.io/library/postgres:16-alpine"
+linkwarden_memory_limit: "1024M"
+linkwarden_db_memory_limit: "256M"

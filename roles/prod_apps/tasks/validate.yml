@@ -1,6 +1,6 @@
 ---
 # ============================================================
-# PRE-FLIGHT VALIDATION — PROD APPS
+# PRE-FLIGHT VALIDATION - PROD APPS
 # Verify NAS reachability, secrets, and NFS readiness before deploy.
 # ============================================================
 
@@ -40,6 +40,6 @@
       - nas_backup_ssh_key_path is match('^/')
     fail_msg: >-
       enable_authentik_remote_backup requires nas_backup_ssh_user and an
-      absolute nas_backup_ssh_key_path. See RUNBOOK.md for details.
+      absolute nas_backup_ssh_key_path. See docs/reference/VARIABLES.md for details.
     quiet: true
   when: enable_authentik_remote_backup | default(false)

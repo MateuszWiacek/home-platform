@@ -17,7 +17,7 @@ services:
       - "traefik.http.routers.homepage.entrypoints=websecure"
       - "traefik.http.routers.homepage.tls.certresolver=myresolver"
       - "traefik.http.services.homepage.loadbalancer.server.port=3000"
-{% if enable_authentik_protection %}
+{% if homepage_auth_mode == 'forwardauth' %}
       - "traefik.http.routers.homepage.middlewares=authentik-auth@file"
 {% endif %}
     deploy:

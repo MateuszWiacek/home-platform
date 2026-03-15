@@ -1,0 +1,13 @@
+services:
+  it-tools:
+    image: corentinth/it-tools:{{ it_tools_version }}
+    container_name: it_tools
+    restart: unless-stopped
+    ports:
+      - "{{ it_tools_service_port }}:80"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: 128M

@@ -1,0 +1,23 @@
+---
+- name: "IT-Tools | Ensure stack directory"
+  ansible.builtin.file:
+    path: "{{ it_tools_stack_dir }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+
+- name: "IT-Tools | Deploy docker-compose file"
+  ansible.builtin.template:
+    src: "it-tools/docker-compose.yml.j2"
+    dest: "{{ it_tools_stack_dir }}/docker-compose.yml"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0644'
+  notify: Restart IT-Tools
+
+- name: "IT-Tools | Start containers"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ it_tools_stack_dir }}"
+  changed_when: false

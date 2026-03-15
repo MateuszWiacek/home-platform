@@ -1,0 +1,8 @@
+---
+navidrome_version: "latest"
+navidrome_stack_dir: "{{ app_stacks_root | default('/opt') }}/navidrome"
+navidrome_data_dir: "{{ navidrome_stack_dir }}/data"
+
+# Music library is served from the existing NAS media NFS mount.
+navidrome_music_dir: "{{ mnt_media }}/music"
+navidrome_memory_limit: "512M"

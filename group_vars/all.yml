@@ -4,12 +4,11 @@ timezone: "Europe/Warsaw"
 nas_ip: "10.0.0.10"
 ryzen_ip: "10.0.0.30"
 proxmox_ip: "10.0.0.20"
-
 public_dns_servers:
   - "1.1.1.1"
   - "8.8.8.8"
 
-# === Public service domains (anonymized/public branch) ===
+# === Public service domains ===
 traefik_domain: "traefik.{{ domain_name }}"
 authentik_domain: "authentik.{{ domain_name }}"
 adguard_domain: "adguard.{{ domain_name }}"
@@ -21,17 +20,65 @@ truenas_domain: "nas.{{ domain_name }}"
 proxmox_domain: "proxmox.{{ domain_name }}"
 paperless_domain: "paperless.{{ domain_name }}"
 immich_domain: "immich.{{ domain_name }}"
+stirling_pdf_domain: "stirling-pdf.{{ domain_name }}"
+it_tools_domain: "it-tools.{{ domain_name }}"
+navidrome_domain: "music.{{ domain_name }}"
+audiobookshelf_domain: "audiobooks.{{ domain_name }}"
+calibre_web_domain: "books.{{ domain_name }}"
+siyuan_domain: "notes.{{ domain_name }}"
+excalidraw_domain: "draw.{{ domain_name }}"
+mealie_domain: "recipes.{{ domain_name }}"
+syncthing_domain: "sync.{{ domain_name }}"
+linkwarden_domain: "links.{{ domain_name }}"
 
 # === Cross-node app ports ===
 immich_service_port: 2283
 paperless_service_port: 8010
 jellyfin_service_port: 8096
+stirling_pdf_service_port: 8084
+it_tools_service_port: 8085
+navidrome_service_port: 4533
+audiobookshelf_service_port: 13378
+calibre_web_service_port: 8083
+siyuan_service_port: 6806
+excalidraw_service_port: 3030
+mealie_service_port: 9925
+syncthing_service_port: 8384
+linkwarden_service_port: 3001
+
+# === Optional books stack toggles ===
+audiobookshelf_enabled: true
+calibre_web_enabled: true
+syncthing_enabled: true
+
+# === Authentication mode per service ===
+# Valid values: local, forwardauth, oidc
+# Keep defaults conservative. Move a service only when its login flow is tested.
+adguard_auth_mode: "forwardauth"
+portainer_auth_mode: "forwardauth"
+homepage_auth_mode: "forwardauth"
+truenas_auth_mode: "local"
+proxmox_auth_mode: "local"
+vaultwarden_auth_mode: "local"
+jellyfin_auth_mode: "local"
+immich_auth_mode: "oidc"
+paperless_auth_mode: "oidc"
+stirling_pdf_auth_mode: "forwardauth"
+it_tools_auth_mode: "forwardauth"
+navidrome_auth_mode: "local"
+audiobookshelf_auth_mode: "local"
+calibre_web_auth_mode: "local"
+siyuan_auth_mode: "local"
+excalidraw_auth_mode: "forwardauth"
+mealie_auth_mode: "local"
+syncthing_auth_mode: "local"
+linkwarden_auth_mode: "local"
 
 # === Homepage ===
 homepage_title: "My Homelab"
 homepage_base_url: "https://{{ homepage_domain }}"
 
-# === NAS local endpoints used by Traefik file provider/Homepage widgets ===
+# === NAS local endpoints (Traefik file provider / Homepage widgets) ===
 truenas_web_port: 81
 proxmox_web_port: 8006
 authentik_api_port: 9000
@@ -46,6 +93,6 @@ authentik_internal_url: "http://{{ nas_ip }}:{{ authentik_api_port }}"
 adguard_internal_url: "http://{{ nas_ip }}:{{ adguard_admin_port }}"
 traefik_internal_url: "http://{{ nas_ip }}:{{ traefik_dashboard_port }}"
 
-# === Shared UID/GID for mounted app data ===
+# === Permissions (shared across NAS and Ryzen) ===
 app_uid: 1000
 app_gid: 1000

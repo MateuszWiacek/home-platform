@@ -19,6 +19,10 @@ http:
         - "websecure"
       tls:
         certResolver: "myresolver"
+{% if truenas_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
 
     proxmox:
       rule: "Host(`{{ proxmox_domain }}`)"
@@ -27,6 +31,10 @@ http:
         - "websecure"
       tls:
         certResolver: "myresolver"
+{% if proxmox_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
 
 {% if enable_remote_apps_routes %}
     paperless:
@@ -36,7 +44,7 @@ http:
         - "websecure"
       tls:
         certResolver: "myresolver"
-{% if enable_authentik_protection %}
+{% if paperless_auth_mode == 'forwardauth' %}
       middlewares:
         - "authentik-auth"
 {% endif %}
@@ -48,9 +56,135 @@ http:
         - "websecure"
       tls:
         certResolver: "myresolver"
-{% if enable_authentik_protection %}
+{% if immich_auth_mode == 'forwardauth' %}
       middlewares:
         - "authentik-auth"
+{% endif %}
+
+    stirling-pdf:
+      rule: "Host(`{{ stirling_pdf_domain }}`)"
+      service: "stirling-pdf"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if stirling_pdf_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
+
+    it-tools:
+      rule: "Host(`{{ it_tools_domain }}`)"
+      service: "it-tools"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if it_tools_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
+
+    navidrome:
+      rule: "Host(`{{ navidrome_domain }}`)"
+      service: "navidrome"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if navidrome_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
+{% if audiobookshelf_enabled | default(false) %}
+
+    audiobookshelf:
+      rule: "Host(`{{ audiobookshelf_domain }}`)"
+      service: "audiobookshelf"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if audiobookshelf_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
+{% endif %}
+{% if calibre_web_enabled | default(false) %}
+
+    calibre-web:
+      rule: "Host(`{{ calibre_web_domain }}`)"
+      service: "calibre-web"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if calibre_web_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
+{% endif %}
+
+    siyuan:
+      rule: "Host(`{{ siyuan_domain }}`)"
+      service: "siyuan"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if siyuan_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
+
+    excalidraw:
+      rule: "Host(`{{ excalidraw_domain }}`)"
+      service: "excalidraw"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if excalidraw_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
+
+    mealie:
+      rule: "Host(`{{ mealie_domain }}`)"
+      service: "mealie"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if mealie_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
+
+    linkwarden:
+      rule: "Host(`{{ linkwarden_domain }}`)"
+      service: "linkwarden"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if linkwarden_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
+{% if syncthing_enabled | default(false) %}
+
+    syncthing:
+      rule: "Host(`{{ syncthing_domain }}`)"
+      service: "syncthing"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if syncthing_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
 {% endif %}
 {% endif %}
 
@@ -79,6 +213,72 @@ http:
         servers:
           - url: "http://{{ ryzen_ip }}:{{ immich_service_port }}"
         passHostHeader: true
+
+    stirling-pdf:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ stirling_pdf_service_port }}"
+        passHostHeader: true
+
+    it-tools:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ it_tools_service_port }}"
+        passHostHeader: true
+
+    navidrome:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ navidrome_service_port }}"
+        passHostHeader: true
+{% if audiobookshelf_enabled | default(false) %}
+
+    audiobookshelf:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ audiobookshelf_service_port }}"
+        passHostHeader: true
+{% endif %}
+{% if calibre_web_enabled | default(false) %}
+
+    calibre-web:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ calibre_web_service_port }}"
+        passHostHeader: true
+{% endif %}
+
+    siyuan:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ siyuan_service_port }}"
+        passHostHeader: true
+
+    excalidraw:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ excalidraw_service_port }}"
+        passHostHeader: true
+
+    mealie:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ mealie_service_port }}"
+        passHostHeader: true
+
+    linkwarden:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ linkwarden_service_port }}"
+        passHostHeader: true
+{% if syncthing_enabled | default(false) %}
+
+    syncthing:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ syncthing_service_port }}"
+        passHostHeader: true
+{% endif %}
 {% endif %}
 
   serversTransports:

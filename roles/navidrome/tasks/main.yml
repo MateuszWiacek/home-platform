@@ -1,0 +1,52 @@
+---
+- name: "Navidrome | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "Navidrome | Verify NFS media mount is active"
+  ansible.builtin.command:
+    cmd: "findmnt --noheadings --output FSTYPE {{ mnt_media }}"
+  register: _navidrome_nfs_check
+  changed_when: false
+  failed_when: >-
+    _navidrome_nfs_check.rc != 0 or
+    'nfs' not in _navidrome_nfs_check.stdout
+
+- name: "Navidrome | Check music library directory on NFS"
+  ansible.builtin.stat:
+    path: "{{ navidrome_music_dir }}"
+  register: _navidrome_music_dir
+
+- name: "Navidrome | Assert music library directory exists"
+  ansible.builtin.assert:
+    that:
+      - _navidrome_music_dir.stat.exists
+      - _navidrome_music_dir.stat.isdir
+    fail_msg: "Expected music library path {{ navidrome_music_dir }} is missing on the mounted NAS media share."
+    quiet: true
+
+- name: "Navidrome | Ensure stack directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+  loop:
+    - "{{ navidrome_stack_dir }}"
+    - "{{ navidrome_data_dir }}"
+
+- name: "Navidrome | Deploy docker-compose file"
+  ansible.builtin.template:
+    src: "navidrome/docker-compose.yml.j2"
+    dest: "{{ navidrome_stack_dir }}/docker-compose.yml"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0644'
+  notify: Restart Navidrome
+
+- name: "Navidrome | Start container"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ navidrome_stack_dir }}"
+  changed_when: false

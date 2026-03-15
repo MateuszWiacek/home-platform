@@ -18,9 +18,13 @@ skip_list:
   - yaml[truthy]
   # Some role names use underscores (core_services, media_stack) — that's fine
   - role-name
-  # Variables in role defaults are intentionally shared via group_vars;
-  # enforcing per-role prefixes would break the entire variable naming scheme.
-  - var-naming[no-role-prefix]
+  # Role defaults intentionally expose operator-facing variable names shared
+  # across roles. Prefixing every default with the role name adds noise without
+  # improving how this repo is operated.
+  - var-naming
+  # site.yml is a thin import wrapper; naming imported playbooks there is not
+  # meaningful and ansible-lint flags it anyway.
+  - name[play]
 
 # Treat warnings as non-fatal during initial adoption
 warn_list:

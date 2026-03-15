@@ -3,9 +3,9 @@ name: Lint & Validate
 
 on:
   push:
-    branches: [main]
+    branches: [main, publication]
   pull_request:
-    branches: [main]
+    branches: [main, publication]
 
 jobs:
   lint:

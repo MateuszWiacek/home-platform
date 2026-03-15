@@ -1,0 +1,17 @@
+---
+# ============================================================
+# UTILITY TOOLS: Stirling-PDF, IT-Tools
+# Stateless toolboxes - no databases, no NFS mounts required.
+# ============================================================
+
+- name: "Utility Tools | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "Utility Tools | Deploy Stirling-PDF"
+  ansible.builtin.import_tasks: stirling_pdf.yml
+  tags: [stirling_pdf]
+
+- name: "Utility Tools | Deploy IT-Tools"
+  ansible.builtin.import_tasks: it_tools.yml
+  tags: [it_tools]

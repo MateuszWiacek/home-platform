@@ -1,0 +1,4 @@
+---
+excalidraw_version: "latest"
+excalidraw_stack_dir: "{{ app_stacks_root | default('/opt') }}/excalidraw"
+excalidraw_memory_limit: "128M"

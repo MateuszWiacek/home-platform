@@ -1,0 +1,12 @@
+---
+- name: Restart Audiobookshelf
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ audiobookshelf_stack_dir }}"
+  when: not ansible_check_mode
+
+- name: Restart Calibre-Web
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ calibre_web_stack_dir }}"
+  when: not ansible_check_mode

@@ -9,7 +9,7 @@
 #   ansible-playbook -i inventory.ini smoke_test.yml --tags ryzen
 # ============================================================
 
-- name: "Smoke Test — NAS (core + media)"
+- name: "Smoke Test - NAS (core + media)"
   hosts: n100
   become: true
   gather_facts: false
@@ -29,21 +29,35 @@
       - jellyfin
       - homepage
 
-    public_https_endpoints:
-      - { name: "Authentik", url: "https://{{ authentik_domain }}" }
-      - { name: "AdGuard Home", url: "https://{{ adguard_domain }}" }
-      - { name: "Vaultwarden", url: "https://{{ vaultwarden_domain }}" }
-      - { name: "Portainer", url: "https://{{ portainer_domain }}" }
-      - { name: "Homepage", url: "https://{{ homepage_domain }}" }
-      - { name: "Jellyfin", url: "https://{{ jellyfin_domain }}" }
-      - { name: "Immich", url: "https://{{ immich_domain }}" }
-      - { name: "Paperless", url: "https://{{ paperless_domain }}" }
-      - { name: "TrueNAS", url: "https://{{ truenas_domain }}" }
+    public_https_endpoints: >-
+      {{
+        [
+          { "name": "Authentik", "url": "https://%s" | format(authentik_domain) },
+          { "name": "AdGuard Home", "url": "https://%s" | format(adguard_domain) },
+          { "name": "Vaultwarden", "url": "https://%s" | format(vaultwarden_domain) },
+          { "name": "Portainer", "url": "https://%s" | format(portainer_domain) },
+          { "name": "Homepage", "url": "https://%s" | format(homepage_domain) },
+          { "name": "Jellyfin", "url": "https://%s" | format(jellyfin_domain) },
+          { "name": "Immich", "url": "https://%s" | format(immich_domain) },
+          { "name": "Paperless", "url": "https://%s" | format(paperless_domain) },
+          { "name": "Stirling-PDF", "url": "https://%s" | format(stirling_pdf_domain) },
+          { "name": "IT-Tools", "url": "https://%s" | format(it_tools_domain) },
+          { "name": "Navidrome", "url": "https://%s" | format(navidrome_domain) },
+          { "name": "SiYuan", "url": "https://%s" | format(siyuan_domain) },
+          { "name": "Excalidraw", "url": "https://%s" | format(excalidraw_domain) },
+          { "name": "Mealie", "url": "https://%s" | format(mealie_domain) },
+          { "name": "Linkwarden", "url": "https://%s" | format(linkwarden_domain) },
+          { "name": "TrueNAS", "url": "https://%s" | format(truenas_domain) }
+        ]
+        + ([{ "name": "Audiobookshelf", "url": "https://%s" | format(audiobookshelf_domain) }] if audiobookshelf_enabled | default(false) else [])
+        + ([{ "name": "Calibre-Web", "url": "https://%s" | format(calibre_web_domain) }] if calibre_web_enabled | default(false) else [])
+        + ([{ "name": "Syncthing", "url": "https://%s" | format(syncthing_domain) }] if syncthing_enabled | default(false) else [])
+      }}
 
   tasks:
     - name: "NAS | Check container status"
       ansible.builtin.command:
-        cmd: "docker ps --format '{% raw %}{{ .Names }} {{ .Status }}{% endraw %}' --filter name={{ item }}"
+        cmd: "docker ps --format '{% raw %}{{ .Names }} {{ .Status }}{% endraw %}' --filter name=^/{{ item }}$"
       register: _nas_containers
       loop: "{{ nas_expected_containers }}"
       changed_when: false
@@ -54,7 +68,7 @@
         msg: >-
           {{ item.item }}:
           {{ 'UP' if item.stdout | length > 0 and 'Up' in item.stdout else 'DOWN' }}
-          {{ '— ' + item.stdout if item.stdout | length > 0 else '' }}
+          {{ '- ' + item.stdout if item.stdout | length > 0 else '' }}
       loop: "{{ _nas_containers.results }}"
       loop_control:
         label: "{{ item.item }}"
@@ -114,27 +128,42 @@
         label: "{{ item.name }}"
 
 
-- name: "Smoke Test — Ryzen (prod apps)"
+- name: "Smoke Test - Ryzen (prod apps)"
   hosts: docker_nodes
   become: true
   gather_facts: false
   tags: [ryzen]
 
   vars:
-    ryzen_expected_containers:
-      - immich_server
-      - immich_machine_learning
-      - immich_postgres
-      - immich_redis
-      - paperless_webserver
-      - paperless_db
-      - paperless_redis
-      - portainer_agent
+    ryzen_expected_containers: >-
+      {{
+        [
+          'immich_server',
+          'immich_machine_learning',
+          'immich_postgres',
+          'immich_redis',
+          'paperless_webserver',
+          'paperless_db',
+          'paperless_redis',
+          'portainer_agent',
+          'stirling_pdf',
+          'it_tools',
+          'navidrome',
+          'siyuan',
+          'excalidraw',
+          'mealie',
+          'linkwarden',
+          'linkwarden_db'
+        ]
+        + (['audiobookshelf'] if audiobookshelf_enabled | default(false) else [])
+        + (['calibre_web'] if calibre_web_enabled | default(false) else [])
+        + (['syncthing'] if syncthing_enabled | default(false) else [])
+      }}
 
   tasks:
     - name: "Ryzen | Check container status"
       ansible.builtin.command:
-        cmd: "docker ps --format '{% raw %}{{ .Names }} {{ .Status }}{% endraw %}' --filter name={{ item }}"
+        cmd: "docker ps --format '{% raw %}{{ .Names }} {{ .Status }}{% endraw %}' --filter name=^/{{ item }}$"
       register: _ryzen_containers
       loop: "{{ ryzen_expected_containers }}"
       changed_when: false
@@ -145,7 +174,7 @@
         msg: >-
           {{ item.item }}:
           {{ 'UP' if item.stdout | length > 0 and 'Up' in item.stdout else 'DOWN' }}
-          {{ '— ' + item.stdout if item.stdout | length > 0 else '' }}
+          {{ '- ' + item.stdout if item.stdout | length > 0 else '' }}
       loop: "{{ _ryzen_containers.results }}"
       loop_control:
         label: "{{ item.item }}"
@@ -199,6 +228,124 @@
     - name: "Ryzen | Paperless status"
       ansible.builtin.debug:
         msg: "Paperless: {{ 'OK' if _paperless_ping.status in [200, 302] else 'UNREACHABLE (status: ' + (_paperless_ping.status | string) + ')' }}"
+
+    - name: "Ryzen | Verify Navidrome HTTP responds"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ navidrome_service_port }}/"
+        return_content: false
+        follow_redirects: none
+        status_code: [200, 302, 401]
+        timeout: 10
+      register: _navidrome_ping
+      failed_when: false
+
+    - name: "Ryzen | Navidrome status"
+      ansible.builtin.debug:
+        msg: "Navidrome: {{ 'OK' if _navidrome_ping.status in [200, 302, 401] else 'UNREACHABLE (status: ' + (_navidrome_ping.status | string) + ')' }}"
+
+    - name: "Ryzen | Verify Audiobookshelf HTTP responds"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ audiobookshelf_service_port }}/"
+        return_content: false
+        follow_redirects: none
+        status_code: [200, 302, 401]
+        timeout: 10
+      register: _audiobookshelf_ping
+      failed_when: false
+      when: audiobookshelf_enabled | default(false)
+
+    - name: "Ryzen | Audiobookshelf status"
+      ansible.builtin.debug:
+        msg: "Audiobookshelf: {{ 'OK' if _audiobookshelf_ping.status in [200, 302, 401] else 'UNREACHABLE (status: ' + (_audiobookshelf_ping.status | string) + ')' }}"
+      when: audiobookshelf_enabled | default(false)
+
+    - name: "Ryzen | Verify Calibre-Web HTTP responds"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ calibre_web_service_port }}/"
+        return_content: false
+        follow_redirects: none
+        status_code: [200, 302, 401]
+        timeout: 10
+      register: _calibre_web_ping
+      failed_when: false
+      when: calibre_web_enabled | default(false)
+
+    - name: "Ryzen | Calibre-Web status"
+      ansible.builtin.debug:
+        msg: "Calibre-Web: {{ 'OK' if _calibre_web_ping.status in [200, 302, 401] else 'UNREACHABLE (status: ' + (_calibre_web_ping.status | string) + ')' }}"
+      when: calibre_web_enabled | default(false)
+
+    - name: "Ryzen | Verify SiYuan HTTP responds"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ siyuan_service_port }}/"
+        return_content: false
+        follow_redirects: none
+        status_code: [200, 302, 401, 403]
+        timeout: 10
+      register: _siyuan_ping
+      failed_when: false
+
+    - name: "Ryzen | SiYuan status"
+      ansible.builtin.debug:
+        msg: "SiYuan: {{ 'OK' if _siyuan_ping.status in [200, 302, 401, 403] else 'UNREACHABLE (status: ' + (_siyuan_ping.status | string) + ')' }}"
+
+    - name: "Ryzen | Verify Excalidraw HTTP responds"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ excalidraw_service_port }}/"
+        return_content: false
+        follow_redirects: none
+        status_code: [200, 302]
+        timeout: 10
+      register: _excalidraw_ping
+      failed_when: false
+
+    - name: "Ryzen | Excalidraw status"
+      ansible.builtin.debug:
+        msg: "Excalidraw: {{ 'OK' if _excalidraw_ping.status in [200, 302] else 'UNREACHABLE (status: ' + (_excalidraw_ping.status | string) + ')' }}"
+
+    - name: "Ryzen | Verify Mealie HTTP responds"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ mealie_service_port }}/"
+        return_content: false
+        follow_redirects: none
+        status_code: [200, 302]
+        timeout: 10
+      register: _mealie_ping
+      failed_when: false
+
+    - name: "Ryzen | Mealie status"
+      ansible.builtin.debug:
+        msg: "Mealie: {{ 'OK' if _mealie_ping.status in [200, 302] else 'UNREACHABLE (status: ' + (_mealie_ping.status | string) + ')' }}"
+
+    - name: "Ryzen | Verify Linkwarden HTTP responds"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ linkwarden_service_port }}/"
+        return_content: false
+        follow_redirects: none
+        status_code: [200, 302]
+        timeout: 10
+      register: _linkwarden_ping
+      failed_when: false
+
+    - name: "Ryzen | Linkwarden status"
+      ansible.builtin.debug:
+        msg: "Linkwarden: {{ 'OK' if _linkwarden_ping.status in [200, 302] else 'UNREACHABLE (status: ' + (_linkwarden_ping.status | string) + ')' }}"
+
+    - name: "Ryzen | Verify Syncthing HTTP responds"
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ syncthing_service_port }}/"
+        return_content: false
+        follow_redirects: none
+        status_code: [200, 302, 401, 403]
+        timeout: 10
+      register: _syncthing_ping
+      failed_when: false
+      when: syncthing_enabled | default(false)
+
+    - name: "Ryzen | Syncthing status"
+      ansible.builtin.debug:
+        msg: "Syncthing: {{ 'OK' if _syncthing_ping.status in [200, 302, 401, 403] else 'UNREACHABLE (status: ' + (_syncthing_ping.status | string) + ')' }}"
+      when: syncthing_enabled | default(false)
 
     - name: "Ryzen | Check backup script exists"
       ansible.builtin.stat:

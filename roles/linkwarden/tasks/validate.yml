@@ -1,0 +1,31 @@
+---
+# ============================================================
+# PRE-FLIGHT VALIDATION - LINKWARDEN
+# Verify required secrets before deploy.
+# ============================================================
+
+- name: "Validate | Docker is available"
+  ansible.builtin.command:
+    cmd: "docker info"
+  check_mode: false
+  changed_when: false
+  failed_when: false
+  register: _docker_check
+
+- name: "Validate | Docker is running"
+  ansible.builtin.assert:
+    that: _docker_check.rc == 0
+    fail_msg: "Docker is not running. Ensure docker_host role has been applied."
+    quiet: true
+
+- name: "Validate | Required secrets are defined"
+  ansible.builtin.assert:
+    that:
+      - vault_linkwarden_db_password is defined
+      - vault_linkwarden_db_password | length > 0
+      - vault_linkwarden_nextauth_secret is defined
+      - vault_linkwarden_nextauth_secret | length > 0
+    fail_msg: >-
+      Linkwarden requires vault_linkwarden_db_password and
+      vault_linkwarden_nextauth_secret in secrets.yml.
+    quiet: true

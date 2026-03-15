@@ -14,9 +14,8 @@ docker_data_dir: "{{ docker_root_dir }}/data"
 media_root_dir: "/mnt/example_storage/media"
 
 # === Traefik compatibility (production/main naming & access) ===
-# Pin to v3.6.1+ — first release with auto-negotiated Docker API version.
-# Fixes Docker 29 incompatibility (upstream PR #12256).
-traefik_version: "v3.6.9"
+# Pin exact tags in the public branch for readability and reproducible deploys.
+traefik_version: "v3.6.8"
 traefik_publish_api_port: true
 traefik_dashboard_via_router: false
 enable_remote_apps_routes: true
@@ -24,37 +23,27 @@ enable_remote_apps_routes: true
 # === Authentik ===
 authentik_version: "2025.12.3"
 authentik_postgres_image: "docker.io/library/postgres:16-alpine"
-authentik_redis_image: "docker.io/library/redis:7-alpine"
+authentik_redis_image: "docker.io/library/redis:alpine"
 
 # === AdGuard Home ===
-# Use latest only for initial bootstrap when stable versions are not yet known.
-# After validation, pin an exact tag for reproducible deploys.
-adguard_version: "latest"
+adguard_version: "v0.107.71"
 
 # === Vaultwarden ===
-# Use latest only for initial bootstrap when stable versions are not yet known.
-# After validation, pin an exact tag for reproducible deploys.
-vaultwarden_version: "latest"
+vaultwarden_version: "1.35.3"
 # Set to true only during initial setup to allow first account creation.
 # Must be switched to false and redeployed immediately after.
 vaultwarden_signups_allowed: false
 
 # === Portainer ===
-# Use latest only for initial bootstrap when stable versions are not yet known.
-# After validation, pin an exact tag for reproducible deploys.
-portainer_version: "latest"
+portainer_version: "2.33.7"
 
 # === Jellyfin ===
-# Use latest only for initial bootstrap when stable versions are not yet known.
-# After validation, pin an exact tag for reproducible deploys.
-jellyfin_version: "latest"
+jellyfin_version: "10.11.6ubu2404-ls20"
 
 # === Homepage ===
-# Use latest only for initial bootstrap when stable versions are not yet known.
-# After validation, pin an exact tag for reproducible deploys.
-homepage_version: "latest"
+homepage_version: "v1.10.1"
 
 # === AdGuard compatibility ===
 # Keep setup mode disabled by default. Enable only for first-run wizard, then disable again.
 adguard_setup_mode: false
-adguard_publish_http_port: false
+adguard_publish_http_port: true

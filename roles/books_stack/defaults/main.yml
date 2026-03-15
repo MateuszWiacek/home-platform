@@ -1,0 +1,20 @@
+---
+books_stack_root: "{{ app_stacks_root | default('/opt') }}"
+
+# Audiobookshelf
+audiobookshelf_enabled: true
+audiobookshelf_version: "latest"
+audiobookshelf_stack_dir: "{{ books_stack_root }}/audiobookshelf"
+audiobookshelf_config_dir: "{{ audiobookshelf_stack_dir }}/config"
+audiobookshelf_metadata_dir: "{{ audiobookshelf_stack_dir }}/metadata"
+audiobooks_library_dir: "{{ mnt_media }}/audiobooks"
+podcasts_library_dir: ""
+audiobookshelf_memory_limit: "512M"
+
+# Calibre-Web
+calibre_web_enabled: false
+calibre_web_version: "latest"
+calibre_web_stack_dir: "{{ books_stack_root }}/calibre-web"
+calibre_web_config_dir: "{{ calibre_web_stack_dir }}/config"
+ebooks_library_dir: "{{ mnt_media }}/ebooks"
+calibre_web_memory_limit: "256M"

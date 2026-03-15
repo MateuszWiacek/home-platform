@@ -1,0 +1,16 @@
+services:
+  siyuan:
+    image: b3log/siyuan:{{ siyuan_version }}
+    container_name: siyuan
+    restart: unless-stopped
+    ports:
+      - "{{ siyuan_service_port }}:6806"
+    command: ["--workspace=/siyuan/workspace", "--accessAuthCode={{ vault_siyuan_access_code }}"]
+    volumes:
+      # Workspace data on local NVMe for performance
+      - {{ siyuan_workspace_dir }}:/siyuan/workspace
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: {{ siyuan_memory_limit }}

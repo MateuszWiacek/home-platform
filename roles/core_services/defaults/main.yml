@@ -1,9 +1,6 @@
 ---
-# Authentik ForwardAuth middleware toggle
-# Set to true after Authentik is configured to enforce SSO on protected services
-enable_authentik_protection: false
-
-# Authentik outpost URL used by Traefik ForwardAuth middleware
+# Authentik outpost URL used by Traefik ForwardAuth middleware.
+# Per-service auth mode is defined in group_vars/all.yml.
 authentik_outpost_url: "http://authentik-server:9000/outpost.goauthentik.io/auth/traefik"
 authentik_postgres_image: "docker.io/library/postgres:16-alpine"
 authentik_redis_image: "docker.io/library/redis:alpine"
@@ -11,9 +8,10 @@ authentik_uid: "1000"
 authentik_gid: "1000"
 
 # Traefik defaults (override in group_vars for environment-specific behavior)
-# Pin to v3.6.1+ — first release with auto-negotiated Docker API version.
-# Fixes Docker 29 incompatibility (upstream PR #12256).
-traefik_version: "v3.6.9"
+# Pin to v3.6.8+ — first release line with auto-negotiated Docker API version.
+# Keep this aligned with the branch-level override unless intentionally testing
+# a newer Traefik build.
+traefik_version: "v3.6.8"
 traefik_publish_api_port: false
 traefik_dashboard_via_router: true
 enable_remote_apps_routes: false

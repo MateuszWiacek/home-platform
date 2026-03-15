@@ -1,0 +1,27 @@
+services:
+  syncthing:
+    image: lscr.io/linuxserver/syncthing:{{ syncthing_version }}
+    container_name: syncthing
+    restart: unless-stopped
+    ports:
+      # Web UI
+      - "{{ syncthing_service_port }}:8384"
+      # Sync protocol (TCP + UDP)
+      - "{{ syncthing_sync_port }}:22000/tcp"
+      - "{{ syncthing_sync_port }}:22000/udp"
+      # Local discovery
+      - "{{ syncthing_discovery_port }}:21027/udp"
+    environment:
+      - PUID={{ app_uid }}
+      - PGID={{ app_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      # Config on local NVMe (database, keys, certificates)
+      - {{ syncthing_config_dir }}:/config
+      # Default sync folder on NAS via NFS
+      - {{ syncthing_sync_dir }}:/data/sync
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: {{ syncthing_memory_limit }}

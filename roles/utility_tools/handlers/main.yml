@@ -1,0 +1,12 @@
+---
+- name: Restart Stirling-PDF
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ stirling_pdf_stack_dir }}"
+  when: not ansible_check_mode
+
+- name: Restart IT-Tools
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ it_tools_stack_dir }}"
+  when: not ansible_check_mode

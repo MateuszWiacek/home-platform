@@ -1,0 +1,21 @@
+services:
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:{{ calibre_web_version }}
+    container_name: calibre_web
+    restart: unless-stopped
+    ports:
+      - "{{ calibre_web_service_port }}:8083"
+    environment:
+      - PUID={{ app_uid }}
+      - PGID={{ app_gid }}
+      - TZ={{ timezone }}
+    volumes:
+      # App config on local NVMe
+      - {{ calibre_web_config_dir }}:/config
+      # Ebook library on NAS HDD pool via NFS (read-write for Calibre metadata.db)
+      - {{ ebooks_library_dir }}:/books
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: {{ calibre_web_memory_limit }}

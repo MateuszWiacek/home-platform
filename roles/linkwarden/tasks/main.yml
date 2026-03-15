@@ -1,0 +1,57 @@
+---
+# ============================================================
+# LINKWARDEN: Self-hosted bookmark archive
+# Requires PostgreSQL. Chromium bundled in main image for
+# webpage archiving (screenshots + single-file snapshots).
+# ============================================================
+
+- name: "Linkwarden | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "Linkwarden | Ensure stack directory"
+  ansible.builtin.file:
+    path: "{{ linkwarden_stack_dir }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+
+- name: "Linkwarden | Ensure database directory exists"
+  ansible.builtin.file:
+    path: "{{ linkwarden_db_dir }}"
+    state: directory
+
+- name: "Linkwarden | Ensure app data directory exists"
+  ansible.builtin.file:
+    path: "{{ linkwarden_data_dir }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+
+- name: "Linkwarden | Deploy environment file"
+  ansible.builtin.template:
+    src: "linkwarden/env.j2"
+    dest: "{{ linkwarden_stack_dir }}/.env"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0600'
+  no_log: true
+  notify: Restart Linkwarden
+
+- name: "Linkwarden | Deploy docker-compose file"
+  ansible.builtin.template:
+    src: "linkwarden/docker-compose.yml.j2"
+    dest: "{{ linkwarden_stack_dir }}/docker-compose.yml"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0644'
+  notify: Restart Linkwarden
+
+- name: "Linkwarden | Start containers"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ linkwarden_stack_dir }}"
+  changed_when: false
+  when: not ansible_check_mode

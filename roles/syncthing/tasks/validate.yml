@@ -1,0 +1,37 @@
+---
+# ============================================================
+# PRE-FLIGHT VALIDATION - SYNCTHING
+# Verify NFS media mount before deploy.
+# ============================================================
+
+- name: "Validate | Docker is available"
+  ansible.builtin.command:
+    cmd: "docker info"
+  check_mode: false
+  changed_when: false
+  failed_when: false
+  register: _docker_check
+
+- name: "Validate | Docker is running"
+  ansible.builtin.assert:
+    that: _docker_check.rc == 0
+    fail_msg: "Docker is not running. Ensure docker_host role has been applied."
+    quiet: true
+
+- name: "Validate | NFS media mount is active"
+  ansible.builtin.command:
+    cmd: "findmnt --noheadings --output FSTYPE {{ mnt_media }}"
+  check_mode: false
+  register: _syncthing_nfs_check
+  changed_when: false
+  failed_when: false
+
+- name: "Validate | NFS media mount result"
+  ansible.builtin.assert:
+    that:
+      - _syncthing_nfs_check.rc == 0
+      - "'nfs' in _syncthing_nfs_check.stdout"
+    fail_msg: >-
+      NFS media mount at {{ mnt_media }} is not active.
+      Ensure prod_apps role has been applied first (NFS mounts).
+    quiet: true

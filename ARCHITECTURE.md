@@ -1,41 +1,25 @@
-# Platform Engineering at Home: Architecture
+# Platform Engineering at Home - Architecture
 
-The "why" behind the stack. For incidents and day-2 procedures, go to [`RUNBOOK.md`](RUNBOOK.md).
+System design reference. For trade-off reasoning and design principles, see [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md).
+For incident response: [`docs/operations/INCIDENT_RESPONSE.md`](docs/operations/INCIDENT_RESPONSE.md).
 
 ---
 
 ## Table of Contents
 
-- [If you're here from LinkedIn](#if-youre-here-from-linkedin)
 - [Node Roles](#node-roles)
 - [Constraints and Success Criteria](#constraints-and-success-criteria)
 - [Storage Placement](#storage-placement)
-- [Decision Log](#decision-log)
-- [Trade-offs and Mitigations](#trade-offs-and-mitigations)
 - [Operational Targets](#operational-targets)
 - [Service Endpoints](#service-endpoints)
 - [Network Flow](#network-flow)
 - [Ansible Structure](#ansible-structure)
-- [Network, Philosophy & Other](#network-philosophy--other)
-
----
-
-## If you're here from LinkedIn
-
-The short version of what this file shows:
-
-- A homelab designed like a platform: DNS, TLS, and identity as one coherent stack, not bolted-on services
-- Every decision documented with a reason. Not "I saw it on YouTube", but actual trade-off thinking
-- Storage split by workload type: ZFS on the NAS, NVMe for latency-sensitive paths
-- Ansible structure that scales: roles, group_vars, vault. Adding a new service is DNS + labels + a role
-
-If you want the operational side - how I recover from failures, what breaks first, what to check - that's in [`RUNBOOK.md`](RUNBOOK.md).
 
 ---
 
 ## Node Roles
 
-### Node 1: NAS / Control Plane (Intel N100)
+### Node 1 - NAS / Control Plane (Intel N100)
 
 | | |
 |---|---|
@@ -43,13 +27,13 @@ If you want the operational side - how I recover from failures, what breaks firs
 | **OS** | TrueNAS SCALE |
 | **Role** | 24/7 backbone: storage + DNS + ingress + identity |
 
-This box stays on. It's the control plane of the home network: DNS, TLS termination, SSO, and storage. Low power by design.
+This box stays on. It's the control plane of the home network: DNS, TLS termination, SSO, storage. Low power by design.
 
 ZFS stability is the constraint here. Containers are capped with memory limits and I verify the caps via `docker inspect ... HostConfig.Memory`. ZFS ARC doesn't care about your app spike.
 
-Jellyfin lives here on purpose: Intel Quick Sync makes transcoding cheap and predictable, even 4K to 1080p.
+Jellyfin lives here on purpose: Intel Quick Sync makes transcoding cheap and predictable, even 4K -> 1080p.
 
-### Node 2: Compute Lane (AMD Ryzen 5 6600H)
+### Node 2 - Compute Lane (AMD Ryzen 5 6600H)
 
 | | |
 |---|---|
@@ -57,7 +41,7 @@ Jellyfin lives here on purpose: Intel Quick Sync makes transcoding cheap and pre
 | **OS** | Debian VM on Proxmox VE |
 | **Role** | CPU/RAM-hungry workloads |
 
-Immich and Paperless-ngx are not NAS-friendly. AI inference, OCR, and Postgres don't belong next to ZFS. The Ryzen takes the noisy work and can go down without taking core services with it.
+Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, and the utility tools do not belong on the NAS. AI inference, OCR, databases, media indexing, and heavier app stacks do not belong next to ZFS. The Ryzen takes the noisy work and can go down without taking core services with it.
 
 ---
 
@@ -69,7 +53,7 @@ Immich and Paperless-ngx are not NAS-friendly. AI inference, OCR, and Postgres d
 - **Storage first**: ZFS shouldn't crash because an app got hungry.
 - **Wife test**: non-technical household member can navigate without help. One dashboard, clean URLs, nothing breaks silently.
 
-> `.homelab.local` is a placeholder. DNS-01 requires a real registered domain.
+> Public branch uses `homelab.local` as a placeholder. Real deployments need a registered domain for DNS-01 via Cloudflare.
 
 ---
 
@@ -87,70 +71,43 @@ Immich and Paperless-ngx are not NAS-friendly. AI inference, OCR, and Postgres d
 
 ---
 
-## Decision Log
-
-| Decision | Reasoning |
-|---|---|
-| **AdGuard Home** | Internal DNS. Clean names, one place to manage. I don't memorize `10.0.0.10:1234`. |
-| **Traefik + Cloudflare DNS-01** | Valid certs on LAN without opening inbound ports. No self-signed pain. |
-| **Authentik over Authelia** | One identity source for users, groups, policies. Easier to reason about access. |
-| **Vaultwarden self-hosted** | My vault, my backup policy. |
-| **Portainer** | Phone-grade admin when I'm away from a real terminal. Complements Ansible, doesn't replace it. |
-| **Homepage** | One dashboard for the whole household. Wife test passes. |
-| **Break-glass local admins** | SSO outage shouldn't mean lockout. Recovery beats purity. |
-| **TrueNAS SCALE on N100** | 24/7 low-power host with native container support. |
-| **Jellyfin on N100** | Intel Quick Sync. Cheap transcoding, 24/7, low power. |
-| **Container RAM limits on NAS** | ZFS ARC doesn't care about your app spike. Caps enforced, verified via `docker inspect`. |
-| **Immich + Paperless on Ryzen** | AI/OCR and databases want real compute. NAS stays stable. |
-| **DB and cache on NVMe** | 1Gbit is not a database link. |
-| **`latest` tags during bootstrap** | Ship fast, validate, then pin. Not the other way around. |
-
----
-
-## Trade-offs and Mitigations
-
-Things I consciously accept. Not a threats list, just a list of known costs with mitigations.
-
-| Trade-off | Benefit | Cost | Mitigation |
-|---|---|---|---|
-| **SSO in the control plane** | One access policy, single front door | SSO down = locked out | Break-glass local admin; ForwardAuth toggleable per-service |
-| **Internal DNS as critical infra** | Clean URLs, no port memorization | DNS down = "everything's broken" from a user's perspective | Fallback resolver on router; IP access still works |
-| **DNS-01 for certs** | Valid LAN certs, no open ports | DNS API dependency, rate limits | Minimal-scope token, rotation, runbook steps |
-| **Reverse proxy as choke point** | One TLS/routing layer | Bad config breaks multiple services at once | Config in code, quick rollback |
-| **GUI tools (Portainer)** | Fast admin from phone | Drift risk if changes bypass Ansible | GUI is an ops console only; changes get backported to code |
-| **`latest` tags during bootstrap** | Faster initial rollout | An update can surprise you | Pin after stabilization; version bumps go through changelog |
-
-> Rule: if recovery is harder than purity, purity loses.
-
----
-
 ## Operational Targets
 
 - **N100** online 24/7. Ryzen VM stoppable without affecting core services.
 - **ZFS ARC** target ~4.7 GiB. Container memory caps enforced and verified.
-- **DB and AI cache** on Ryzen NVMe: no 1Gbit roundtrip per query.
+- **DB and AI cache** on Ryzen NVMe, no 1Gbit roundtrip per query.
 
 ---
 
 ## Service Endpoints
 
-User-facing web services sit behind Traefik, use HTTPS via Cloudflare DNS-01, and do not require inbound router ports. The Traefik dashboard is LAN-only.
+Everything behind Traefik, HTTPS via Cloudflare DNS-01. No inbound router exposure. Traefik dashboard is LAN-only.
 
 | Service | URL | Node |
 |---|---|---|
-| Traefik dashboard | `http://<nas-ip>:8090` *(LAN-only)* | NAS |
-| Authentik | `https://authentik.<domain>` | NAS |
-| AdGuard Home | `https://adguard.<domain>` | NAS |
-| Vaultwarden | `https://vaultwarden.<domain>` | NAS |
-| Portainer | `https://portainer.<domain>` | NAS |
-| Homepage | `https://homepage.<domain>` | NAS |
-| Jellyfin | `https://jellyfin.<domain>` | NAS |
-| Immich | `https://immich.<domain>` | Ryzen VM |
-| Paperless-ngx | `https://paperless.<domain>` | Ryzen VM |
-| TrueNAS UI | `https://nas.<domain>` | NAS |
-| Proxmox | `https://proxmox.<domain>` | NAS -> Proxmox |
+| Traefik dashboard | `http://10.0.0.10:8090` *(LAN-only)* | NAS |
+| Authentik | `https://authentik.homelab.local` | NAS |
+| AdGuard Home | `https://adguard.homelab.local` | NAS |
+| Vaultwarden | `https://vaultwarden.homelab.local` | NAS |
+| Portainer | `https://portainer.homelab.local` | NAS |
+| Homepage | `https://homepage.homelab.local` | NAS |
+| Jellyfin | `https://jellyfin.homelab.local` | NAS |
+| Immich | `https://immich.homelab.local` | Ryzen VM |
+| Paperless-ngx | `https://paperless.homelab.local` | Ryzen VM |
+| Stirling-PDF | `https://stirling-pdf.homelab.local` | Ryzen VM |
+| IT-Tools | `https://it-tools.homelab.local` | Ryzen VM |
+| Navidrome | `https://music.homelab.local` | Ryzen VM |
+| Audiobookshelf | `https://audiobooks.homelab.local` | Ryzen VM |
+| Calibre-Web | `https://books.homelab.local` | Ryzen VM |
+| SiYuan | `https://notes.homelab.local` | Ryzen VM |
+| Excalidraw | `https://draw.homelab.local` | Ryzen VM |
+| Mealie | `https://recipes.homelab.local` | Ryzen VM |
+| Linkwarden | `https://links.homelab.local` | Ryzen VM |
+| Syncthing | `https://sync.homelab.local` *(optional)* | Ryzen VM |
+| TrueNAS UI | `https://nas.homelab.local` | NAS |
+| Proxmox | `https://proxmox.homelab.local` | NAS -> Proxmox |
 
-Immich and Paperless-ngx run on the Ryzen VM but route through NAS Traefik via file provider. Docker socket provider only sees local containers.
+Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, and the utility tools run on the Ryzen VM but route through NAS Traefik via file provider. Docker socket provider only sees local containers. Syncthing is optional because its sync directory must exist on the NAS first.
 
 ---
 
@@ -158,9 +115,9 @@ Immich and Paperless-ngx run on the Ryzen VM but route through NAS Traefik via f
 
 Traffic path from client to service:
 
-```text
+```
                     ┌───────────────┐
-Client (LAN/WiFi) ->│ AdGuard (DNS) │ -> resolves service.<domain> -> <nas-ip>
+Client (LAN/WiFi) ->│ AdGuard (DNS) │ -> resolves service.<domain> -> 10.0.0.10
                     └──────┬────────┘
                            │
                            v
@@ -170,32 +127,32 @@ Client (LAN/WiFi) ->│ AdGuard (DNS) │ -> resolves service.<domain> -> <nas-i
                            │ ForwardAuth (optional per-service)
                            v
                     ┌───────────────┐
-                    │  Authentik    │  SSO + policies
+                    │   Authentik   │  SSO + policies
                     └──────┬────────┘
                            │
           ┌────────────────┴────────────────┐
           v                                 v
    NAS-local apps                      Ryzen VM apps
- (Vaultwarden, Jellyfin, etc.)        (Immich, Paperless, DBs)
+ (Vaultwarden, Jellyfin, etc.)        (Immich, Paperless, Navidrome, Mealie, Linkwarden, utility tools, DBs)
 ```
 
 Two nodes, split by responsibility and power profile:
 
-```text
+```
 ┌─────────────────────────────────┐     ┌──────────────────────────────────┐
 │         NAS - Intel N100        │     │       Compute - Ryzen 5 6600H    │
 │         TrueNAS SCALE           │     │       Debian VM on Proxmox       │
 │                                 │     │                                  │
 │  Traefik    AdGuard Home        │     │  Immich       Paperless-ngx      │
-│  Authentik  Vaultwarden         │<----│  PostgreSQL   AI model cache     │
-│  Jellyfin   Homepage            │ NFS │                                  │
-│  Portainer                      │     │  Heavy CPU/RAM workloads         │
+│  Authentik  Vaultwarden         │<----│  Navidrome    Audiobookshelf     │
+│  Jellyfin   Homepage            │ NFS │  Calibre-Web  SiYuan             │
+│  Portainer                      │     │  Excalidraw   Mealie             │
+│                                 │     │  Linkwarden   Optional Syncthing │
+│                                 │     │  Heavy CPU/RAM workloads         │
 │                                 │     │  Local NVMe for DB/cache data    │
 │  24/7, low power, ZFS storage   │     │                                  │
 └─────────────────────────────────┘     └──────────────────────────────────┘
 ```
-
-The important implementation detail is that Ryzen-hosted apps do not rely on the Docker socket provider. They are exposed by Traefik's file provider, using `ryzen_ip`, `immich_service_port`, and `paperless_service_port` from `group_vars/all.yml`.
 
 ---
 
@@ -206,6 +163,14 @@ roles/
 ├── core_services/   # Traefik, AdGuard Home, Authentik, Vaultwarden, Portainer
 ├── media_stack/     # Jellyfin, Homepage
 ├── prod_apps/       # Immich, Paperless-ngx, DB backups
+├── navidrome/       # Navidrome music streaming
+├── utility_tools/   # Stirling-PDF, IT-Tools
+├── books_stack/     # Audiobookshelf, Calibre-Web
+├── siyuan/          # SiYuan knowledge base
+├── excalidraw/      # Excalidraw collaborative whiteboard
+├── mealie/          # Mealie recipe manager
+├── syncthing/       # Syncthing file synchronization
+├── linkwarden/      # Linkwarden bookmark archive
 ├── common/          # APT baseline, qemu-guest-agent
 ├── ssh_hardening/   # Shared SSH policy, both nodes
 └── docker_host/     # Docker engine, Portainer Agent
@@ -220,117 +185,4 @@ group_vars/
 secrets.yml               # Vault: tokens, passwords, API keys; never in git
 ```
 
-Roles are independently deployable via tags. IPs, domains, and versions live in `group_vars`. Credentials live in `secrets.yml` (vault).
-
-
-## Network, Philosophy & Other
-
-If you made it here, you're either **really interested** or **really bored**.
-
-This is the least formal part of the document: a small Easter egg with some personality and the thinking behind how I organize things.
-
-Like many software geeks, I like Easter eggs. This is mine.
-
----
-
-### First: the network part (because I promised)
-
-I don't include a full network topology in this repo, because that is not the main scope of this homelab documentation.
-
-I **do** want to show how I organize things, because once you run a multi-node environment at home, structure stops being optional.
-
----
-
-### Router choice (OpenWrt)
-
-At home I run **OpenWrt**.
-
-It has pros and cons (trade-offs everywhere), but for my use case I value:
-
-- **flexibility**
-- **regular updates** (especially vs some consumer brands)
-- **features that matter in day-2 operations** (VLANs, proper control)
-
-For me, **IP address organization is critical** as the environment grows.
-
----
-
-### Example network organization (example, not a rule)
-
-Use IP ranges with intent, so you don't need to scan the network and guess what is what.
-
-- **Critical services** -> `10.0.0.2-10`
-  Easy to remember, easy to reach.
-
-- **VMs / servers** -> `10.0.0.11-30` (expand later if needed)
-  As the number of machines grows, this reduces mental overhead.
-
-- **Printers / infrastructure-like devices** -> `10.0.0.90-99`
-
-- **DHCP clients** (laptops, phones, random devices) -> `10.0.0.100-254`
-  Controlled chaos.
-
-You can organize it differently. This is simply the pattern I use to keep things readable and predictable.
-
----
-
-### VLANs / IoT segregation (highly recommended)
-
-A very useful feature of better routers (and OpenWrt) is **VLAN support**.
-
-I keep all IoT devices (robot vacuum, air purifiers, smart bulbs, etc.) in a **separate Wi-Fi/network** with **no access to the main network**.
-
-**Practical setup:** separate IoT network  
-**Principle:** segment what you do not fully trust  
-**Trade-off:** more configuration, but the security and clarity are worth it
-
-Also, I'd rather not have my *too smart* vacuum anywhere near Proxmox.
-
-I'm a big fan of **segmentation and security**, and IoT vendors are... let's say... not exactly famous for security engineering.
-
----
-
-### Why this is in `architecture`
-
-**Why not `README`?**  
-Because many people leave early (fair enough).
-
-**Why not `runbook`?**  
-Because runbooks are for operations, usually when something is on fire and you need clear steps, not side notes.
-
-`Architecture` is the right place for this.
-
-At the end of the day, **who we are as engineers shows in how we design systems**.  
-This section is both a practical note and a small Easter egg.
-
-And yes, it's **my document**, so I decide.
-
----
-
-### This repo will evolve
-
-This repo reflects what I run at home **today**, but it will evolve naturally over time.
-
-I like experimenting, and I already have more ideas than time (including a future OPNsense-based firewall setup).
-
-At the same time, as of **March 2026**, I need to keep a healthy balance:
-
-- I do similar work professionally at a much bigger scale
-- I genuinely enjoy tinkering
-- I do not want to burn out and lose that enjoyment
-
-Even with AI (which I've been using and experimenting with since 2022), and yes, I treat it as an **exoskeleton / force multiplier**, balance still matters.
-
----
-
-### Contact
-
-If you got this far and you:
-
-- have questions
-- have suggestions
-- found a bug
-- want to request something (maybe hosting some software in a homelab)
-- or just want to talk like two geeks
-
-can open an issue or reach out via LinkedIn.
+Roles are independently deployable via tags. IPs, domains, versions -> `group_vars`. Credentials -> `secrets.yml` (vault).

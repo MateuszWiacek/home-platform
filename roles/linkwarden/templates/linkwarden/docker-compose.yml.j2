@@ -1,0 +1,44 @@
+services:
+  linkwarden:
+    image: ghcr.io/linkwarden/linkwarden:{{ linkwarden_version }}
+    container_name: linkwarden
+    restart: unless-stopped
+    depends_on:
+      linkwarden_db:
+        condition: service_healthy
+    ports:
+      - "{{ linkwarden_service_port }}:3000"
+    env_file:
+      - .env
+    environment:
+      - TZ={{ timezone }}
+    volumes:
+      # Archived pages and screenshots on local NVMe
+      - {{ linkwarden_data_dir }}:/data/data
+      - /etc/localtime:/etc/localtime:ro
+    deploy:
+      resources:
+        limits:
+          memory: {{ linkwarden_memory_limit }}
+
+  linkwarden_db:
+    image: "{{ linkwarden_postgres_image }}"
+    container_name: linkwarden_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: linkwarden
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: linkwarden
+    volumes:
+      # Database on local NVMe - no network latency
+      - {{ linkwarden_db_dir }}:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d linkwarden -U linkwarden"]
+      start_period: 20s
+      interval: 30s
+      retries: 5
+      timeout: 5s
+    deploy:
+      resources:
+        limits:
+          memory: {{ linkwarden_db_memory_limit }}

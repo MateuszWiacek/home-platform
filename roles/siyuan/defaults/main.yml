@@ -1,0 +1,5 @@
+---
+siyuan_version: "latest"
+siyuan_stack_dir: "{{ app_stacks_root | default('/opt') }}/siyuan"
+siyuan_workspace_dir: "{{ siyuan_stack_dir }}/workspace"
+siyuan_memory_limit: "512M"
