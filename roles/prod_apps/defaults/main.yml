@@ -1,7 +1,7 @@
 ---
 # Production app image/version defaults.
 # Override in group_vars/docker_nodes.yml for pinned production versions.
-immich_version: "release"
+immich_version: "v2.5.6"
 paperless_version: "latest"
 
 immich_postgres_image: "tensorchord/pgvecto-rs:pg14-v0.2.0"

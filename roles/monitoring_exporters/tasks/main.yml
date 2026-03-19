@@ -1,0 +1,24 @@
+---
+- name: "Monitoring Exporters | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "Monitoring Exporters | Ensure stack directory exists"
+  ansible.builtin.file:
+    path: "{{ exporters_stack_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "Monitoring Exporters | Deploy docker-compose file"
+  ansible.builtin.template:
+    src: "docker-compose.yml.j2"
+    dest: "{{ exporters_stack_dir }}/docker-compose.yml"
+    mode: '0644'
+  notify: Restart monitoring exporters
+
+- name: "Monitoring Exporters | Start containers"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ exporters_stack_dir }}"
+  changed_when: false
+  when: not ansible_check_mode

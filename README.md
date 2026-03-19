@@ -6,8 +6,6 @@
 
 [Architecture](ARCHITECTURE.md) | [Design Philosophy](DESIGN_PHILOSOPHY.md) | [Docs](docs/)
 
-[![Lint & Validate](https://github.com/MateuszWiacek/home_platform_private/actions/workflows/lint.yml/badge.svg)](https://github.com/MateuszWiacek/home_platform_private/actions/workflows/lint.yml)
-
 A working home platform, not a demo. DNS, TLS, SSO, self-hosted media, photos, and documents, all automated end to end with Ansible. No inbound router exposure, no self-signed certs, no "just click through the warning". If something breaks at 2am and I'm not around, my wife can follow the [recovery guide](docs/operations/NON_TECHNICAL_RECOVERY.md) and fix it. That's the bar.
 
 ---
@@ -37,6 +35,7 @@ If you're here to build your own homestack, skip the philosophy and jump to the 
 | Portainer | Container admin when I'm not at a real terminal |
 | Jellyfin | Media server, Intel Quick Sync does the heavy lifting |
 | Homepage | Dashboard, one place for the whole household |
+| Grafana | Monitoring dashboard when I need to see the whole stack breathe |
 | Immich | Google Photos replacement that actually stays mine |
 | Paperless-ngx | Document archive with OCR, no more paper piles |
 | Stirling-PDF | PDF toolbox without uploading files to strangers |
@@ -127,6 +126,7 @@ Full failure modes and incident playbooks: [`docs/operations/INCIDENT_RESPONSE.m
 
 **Reference:**
 - [`docs/reference/DEPLOY_COMMANDS.md`](docs/reference/DEPLOY_COMMANDS.md) - canonical deploy command reference
+- [`docs/reference/MONITORING_STACK.md`](docs/reference/MONITORING_STACK.md) - what the monitoring stack does and how to use it
 - [`docs/reference/VARIABLES.md`](docs/reference/VARIABLES.md) - variable map, secrets, backup coverage
 - [`docs/reference/BACKUP_STRATEGY.md`](docs/reference/BACKUP_STRATEGY.md) - backup tiers, recovery targets, off-site status
 - [`docs/reference/ANSIBLE_NOTES.md`](docs/reference/ANSIBLE_NOTES.md) - Ansible patterns, gotchas, conventions

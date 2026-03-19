@@ -172,6 +172,20 @@ http:
       middlewares:
         - "authentik-auth"
 {% endif %}
+{% if monitoring_enabled | default(false) | bool %}
+
+    grafana:
+      rule: "Host(`{{ grafana_domain }}`)"
+      service: "grafana"
+      entryPoints:
+        - "websecure"
+      tls:
+        certResolver: "myresolver"
+{% if grafana_auth_mode == 'forwardauth' %}
+      middlewares:
+        - "authentik-auth"
+{% endif %}
+{% endif %}
 {% if syncthing_enabled | default(false) %}
 
     syncthing:
@@ -271,6 +285,14 @@ http:
         servers:
           - url: "http://{{ ryzen_ip }}:{{ linkwarden_service_port }}"
         passHostHeader: true
+{% if monitoring_enabled | default(false) | bool %}
+
+    grafana:
+      loadBalancer:
+        servers:
+          - url: "http://{{ ryzen_ip }}:{{ grafana_service_port }}"
+        passHostHeader: true
+{% endif %}
 {% if syncthing_enabled | default(false) %}
 
     syncthing:

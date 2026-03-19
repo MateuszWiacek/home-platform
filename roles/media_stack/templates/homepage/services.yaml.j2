@@ -132,6 +132,13 @@
         widget:
           type: traefik
           url: "{{ traefik_internal_url }}"
+{% if monitoring_enabled | default(false) | bool %}
+
+    - Grafana:
+        icon: grafana.png
+        href: "https://{{ grafana_domain }}"
+        description: "Metrics & Alerts Dashboard"
+{% endif %}
 
 - Utility Tools:
     - Stirling-PDF:

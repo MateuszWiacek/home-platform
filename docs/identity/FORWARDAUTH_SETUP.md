@@ -35,7 +35,7 @@ Traefik checks every request against Authentik before forwarding. The `authentik
 
 ## Prerequisites
 
-- Authentik is deployed and reachable at `https://authentik.homelab.local`
+- Authentik is deployed and reachable at `https://auth.homelab.local`
 - The `authentik-auth` ForwardAuth middleware is defined in `roles/core_services/templates/traefik/dynamic_conf.yml.j2`
 - The service has an auth mode variable in `group_vars/all.yml`
 - You know which Authentik proxy outpost is currently serving Traefik requests
@@ -54,7 +54,7 @@ If the provider exists but the application is not assigned to the outpost, Traef
 
 ### Exact UI path
 
-1. Open `https://authentik.homelab.local/if/admin/`
+1. Open `https://auth.homelab.local/if/admin/`
 2. Go to `Applications -> Applications`
 3. Choose `Create with Provider`
 4. Select `Proxy Provider`
@@ -73,16 +73,16 @@ Leave the rest of the provider fields at their defaults unless you have a reason
 
 ### Wave 1 live examples
 
-These are the services currently implemented behind ForwardAuth in this repo:
+These are the services implemented behind ForwardAuth in the reference deployment:
 
 | Service | Authentik object type | External host | Must be assigned to proxy outpost |
 |---|---|---|---|
-| AdGuard | Proxy Provider + Application | `https://adguard.homelab.local` | Yes |
+| AdGuard | Proxy Provider + Application | `https://dns.homelab.local` | Yes |
 | Portainer | Proxy Provider + Application | `https://portainer.homelab.local` | Yes |
-| Homepage | Proxy Provider + Application | `https://homepage.homelab.local` | Yes |
+| Homepage | Proxy Provider + Application | `https://home.homelab.local` | Yes |
 | Excalidraw | Proxy Provider + Application | `https://draw.homelab.local` | Yes |
-| IT-Tools | Proxy Provider + Application | `https://it-tools.homelab.local` | Yes |
-| Stirling-PDF | Proxy Provider + Application | `https://stirling-pdf.homelab.local` | Yes |
+| IT-Tools | Proxy Provider + Application | `https://tools.homelab.local` | Yes |
+| Stirling-PDF | Proxy Provider + Application | `https://pdf.homelab.local` | Yes |
 
 ---
 

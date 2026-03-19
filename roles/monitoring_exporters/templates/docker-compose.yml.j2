@@ -1,0 +1,62 @@
+services:
+  node-exporter:
+    container_name: node_exporter
+    image: "prom/node-exporter:{{ node_exporter_version }}"
+    command:
+      - "--path.rootfs=/host"
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+    volumes:
+      - /:/host:ro,rslave
+    ports:
+      - "{{ node_exporter_port }}:9100"
+    pid: host
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ node_exporter_memory_limit }}
+
+  cadvisor:
+    container_name: cadvisor
+    image: "gcr.io/cadvisor/cadvisor:{{ cadvisor_version }}"
+    command:
+      - "--port=8080"
+      - "--housekeeping_interval=30s"
+      - "--docker_only=true"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "{{ cadvisor_port }}:8080"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ cadvisor_memory_limit }}
+
+{% if smartctl_exporter_enabled | default(false) | bool %}
+  smartctl-exporter:
+    container_name: smartctl_exporter
+    image: "prometheuscommunity/smartctl-exporter:{{ smartctl_exporter_version }}"
+    command:
+      - "--smartctl.interval={{ smartctl_exporter_poll_interval }}"
+      - "--smartctl.rescan={{ smartctl_exporter_rescan_interval }}"
+      - "--smartctl.device-exclude={{ smartctl_exporter_device_exclude_regex }}"
+      - "--web.listen-address=:9633"
+    user: "0:0"
+    privileged: true
+    volumes:
+      - /run/udev:/run/udev:ro
+    ports:
+      - "{{ smartctl_exporter_port }}:9633"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ smartctl_exporter_memory_limit }}
+{% endif %}

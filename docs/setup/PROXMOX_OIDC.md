@@ -9,7 +9,7 @@ This gets its own document because the setup path is unique - it combines Traefi
 ## Traffic flow
 
 ```
-proxmox.homelab.local
+pve.homelab.local
   -> AdGuard DNS rewrite -> 10.0.0.10 (NAS / Traefik)
   -> Traefik router/service
   -> https://10.0.0.20:8006 (Proxmox)
@@ -25,13 +25,13 @@ The Traefik side is defined in `roles/core_services/templates/traefik/dynamic_co
 
 In Authentik admin, create an OAuth2/OpenID provider for Proxmox.
 
-Set the redirect URI exactly to `https://proxmox.homelab.local/` (note the trailing slash).
+Set the redirect URI exactly to `https://pve.homelab.local/` (note the trailing slash).
 
 ### 2. Configure Proxmox realm
 
 ```bash
 pveum realm add authentik --type openid \
-  --issuer-url https://authentik.homelab.local/application/o/proxmox/ \
+  --issuer-url https://auth.homelab.local/application/o/proxmox/ \
   --client-id proxmox \
   --username-claim preferred_username \
   --autocreate 1
@@ -45,7 +45,7 @@ pveum realm list
 
 TLS sanity check (bypasses browser cache):
 ```bash
-curl -vI https://proxmox.homelab.local
+curl -vI https://pve.homelab.local
 ```
 
 ---

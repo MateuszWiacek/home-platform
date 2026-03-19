@@ -1,0 +1,60 @@
+services:
+  prometheus:
+    container_name: prometheus
+    image: "prom/prometheus:{{ prometheus_version }}"
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time={{ prometheus_retention_time }}"
+      - "--storage.tsdb.retention.size={{ prometheus_retention_size }}"
+      - "--web.enable-lifecycle"
+    volumes:
+      - {{ monitoring_stack_dir }}/config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - {{ monitoring_stack_dir }}/config/alert_rules.yml:/etc/prometheus/alert_rules.yml:ro
+      - {{ prometheus_data_dir }}:/prometheus
+    ports:
+      - "127.0.0.1:{{ prometheus_service_port }}:9090"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ prometheus_memory_limit }}
+
+  alertmanager:
+    container_name: alertmanager
+    image: "prom/alertmanager:{{ alertmanager_version }}"
+    command:
+      - "--config.file=/etc/alertmanager/alertmanager.yml"
+      - "--storage.path=/alertmanager"
+    volumes:
+      - {{ monitoring_stack_dir }}/config/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - {{ alertmanager_data_dir }}:/alertmanager
+    ports:
+      - "127.0.0.1:{{ alertmanager_service_port }}:9093"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ alertmanager_memory_limit }}
+
+  grafana:
+    container_name: grafana
+    image: "grafana/grafana-oss:{{ grafana_version }}"
+    environment:
+      GF_SECURITY_ADMIN_USER: "admin"
+      GF_SECURITY_ADMIN_PASSWORD: "{{ vault_grafana_admin_password }}"
+      GF_SERVER_ROOT_URL: "https://{{ grafana_domain }}"
+      GF_SERVER_DOMAIN: "{{ grafana_domain }}"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: "/etc/grafana/dashboards/homelab-overview.json"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - {{ grafana_data_dir }}:/var/lib/grafana
+      - {{ monitoring_stack_dir }}/config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - {{ grafana_dashboards_dir }}:/etc/grafana/dashboards:ro
+    ports:
+      - "{{ grafana_service_port }}:3000"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ grafana_memory_limit }}

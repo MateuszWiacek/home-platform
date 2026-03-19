@@ -2,11 +2,11 @@
 - name: Restart Homepage
   ansible.builtin.shell:
     cmd: "docker compose up -d --remove-orphans"
-    chdir: "{{ docker_config_dir }}/homepage"
+    chdir: "{{ homepage_stack_dir }}"
   when: not ansible_check_mode
 
 - name: Restart Jellyfin
   ansible.builtin.shell:
     cmd: "docker compose up -d --remove-orphans"
-    chdir: "{{ docker_config_dir }}/jellyfin"
+    chdir: "{{ jellyfin_stack_dir }}"
   when: not ansible_check_mode

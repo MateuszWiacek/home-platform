@@ -1,0 +1,34 @@
+---
+# ============================================================
+# PRE-FLIGHT VALIDATION - MEDIA STACK
+# Verify Docker is available and the Jellyfin media path exists.
+# ============================================================
+
+- name: "Validate | Docker is available"
+  ansible.builtin.command:
+    cmd: "docker info"
+  check_mode: false
+  changed_when: false
+  failed_when: false
+  register: _docker_check
+
+- name: "Validate | Docker is running"
+  ansible.builtin.assert:
+    that: _docker_check.rc == 0
+    fail_msg: "Docker is not running. Ensure docker_host role has been applied."
+    quiet: true
+
+- name: "Validate | Jellyfin media path exists"
+  ansible.builtin.stat:
+    path: "{{ media_root_dir }}"
+  register: _jellyfin_media_dir
+  when: jellyfin_enabled | bool
+
+- name: "Validate | Jellyfin media path result"
+  ansible.builtin.assert:
+    that:
+      - _jellyfin_media_dir.stat.exists
+      - _jellyfin_media_dir.stat.isdir
+    fail_msg: "Expected Jellyfin media path {{ media_root_dir }} is missing."
+    quiet: true
+  when: jellyfin_enabled | bool

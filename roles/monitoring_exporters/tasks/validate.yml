@@ -1,0 +1,13 @@
+---
+- name: "Validate | Docker is available"
+  ansible.builtin.command:
+    cmd: "docker info --format '{% raw %}{{ .ServerVersion }}{% endraw %}'"
+  changed_when: false
+  check_mode: false
+  register: _docker_check
+
+- name: "Validate | Docker check result"
+  ansible.builtin.assert:
+    that: _docker_check.rc == 0
+    fail_msg: "Docker is not running or not accessible."
+    quiet: true

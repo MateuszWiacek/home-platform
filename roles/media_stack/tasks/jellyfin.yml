@@ -1,7 +1,7 @@
 ---
 - name: "Jellyfin | Create configuration directory"
   ansible.builtin.file:
-    path: "{{ docker_config_dir }}/jellyfin"
+    path: "{{ jellyfin_stack_dir }}"
     state: directory
     owner: "{{ app_uid }}"
     group: "{{ app_gid }}"
@@ -10,7 +10,7 @@
 - name: "Jellyfin | Deploy docker-compose file"
   ansible.builtin.template:
     src: "jellyfin/docker-compose.yml.j2"
-    dest: "{{ docker_config_dir }}/jellyfin/docker-compose.yml"
+    dest: "{{ jellyfin_stack_dir }}/docker-compose.yml"
     owner: "{{ app_uid }}"
     group: "{{ app_gid }}"
     mode: '0644'
@@ -19,5 +19,5 @@
 - name: "Jellyfin | Start container"
   ansible.builtin.shell:
     cmd: "docker compose up -d --remove-orphans"
-    chdir: "{{ docker_config_dir }}/jellyfin"
+    chdir: "{{ jellyfin_stack_dir }}"
   changed_when: false

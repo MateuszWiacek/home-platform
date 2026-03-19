@@ -4,10 +4,16 @@
 # Entertainment and infrastructure dashboard for the home lab.
 # ============================================================
 
+- name: "Media Stack | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
 - name: "Media Stack | Deploy Homepage dashboard"
   ansible.builtin.import_tasks: homepage.yml
   tags: [homepage]
+  when: homepage_enabled | bool
 
 - name: "Media Stack | Deploy Jellyfin"
   ansible.builtin.import_tasks: jellyfin.yml
   tags: [jellyfin]
+  when: jellyfin_enabled | bool

@@ -38,7 +38,7 @@ The application handles the OIDC flow directly. Traefik is not involved in the a
 
 ## Prerequisites
 
-- Authentik is deployed and reachable at `https://authentik.homelab.local`
+- Authentik is deployed and reachable at `https://auth.homelab.local`
 - The service auth mode is set to `oidc` in `group_vars/all.yml`
 - Client ID and client secret are stored in `secrets.yml`
 - You know the exact redirect URI for the target application
@@ -49,7 +49,7 @@ The application handles the OIDC flow directly. Traefik is not involved in the a
 
 ### 1. Create the Authentik provider and application
 
-In Authentik admin (`https://authentik.homelab.local/if/admin/`):
+In Authentik admin (`https://auth.homelab.local/if/admin/`):
 
 1. **Create an OAuth2/OpenID Provider:**
    - Name: `<service>` (e.g. `immich`)
@@ -69,8 +69,8 @@ In Authentik admin (`https://authentik.homelab.local/if/admin/`):
 
 | Service | Provider type | Redirect URI | App-side issuer URL |
 |---|---|---|---|
-| Immich | OAuth2/OpenID Provider | `https://immich.homelab.local/auth/login` | `https://authentik.homelab.local/application/o/immich/` |
-| Paperless-ngx | OAuth2/OpenID Provider | `https://paperless.homelab.local/accounts/oidc/authentik/login/callback/` | `https://authentik.homelab.local/application/o/paperless/.well-known/openid-configuration` |
+| Immich | OAuth2/OpenID Provider | `https://photos.homelab.local/auth/login` | `https://auth.homelab.local/application/o/immich/` |
+| Paperless-ngx | OAuth2/OpenID Provider | `https://docs.homelab.local/accounts/oidc/authentik/login/callback/` | `https://auth.homelab.local/application/o/paperless/.well-known/openid-configuration` |
 
 These two are already implemented in Ansible:
 - `roles/prod_apps/templates/immich/env.j2`
@@ -110,7 +110,7 @@ Each app has its own env vars. Common pattern in the `.env.j2` template:
 # Example: Immich
 {% if immich_auth_mode == 'oidc' %}
 OAUTH_ENABLED=true
-OAUTH_ISSUER_URL=https://authentik.homelab.local/application/o/<service>/
+OAUTH_ISSUER_URL=https://auth.homelab.local/application/o/<service>/
 OAUTH_CLIENT_ID={{ vault_immich_oauth_client_id }}
 OAUTH_CLIENT_SECRET={{ vault_immich_oauth_client_secret }}
 OAUTH_AUTO_REGISTER=true
@@ -151,12 +151,12 @@ Record every redirect URI here as services are onboarded. Byte-for-byte accuracy
 
 | Service | Redirect URI | Status |
 |---|---|---|
-| Immich | `https://immich.homelab.local/auth/login` | Implemented |
-| Paperless-ngx | `https://paperless.homelab.local/accounts/oidc/authentik/login/callback/` | Implemented |
+| Immich | `https://photos.homelab.local/auth/login` | Implemented in the reference deployment |
+| Paperless-ngx | `https://docs.homelab.local/accounts/oidc/authentik/login/callback/` | Implemented in the reference deployment |
 | Mealie | TBD | Planned |
 | Audiobookshelf | TBD | Planned |
 | Linkwarden | TBD | Planned |
-| Proxmox | `https://proxmox.homelab.local/` | See [PROXMOX_OIDC](../setup/PROXMOX_OIDC.md) |
+| Proxmox | `https://pve.homelab.local/` | See [PROXMOX_OIDC](../setup/PROXMOX_OIDC.md) |
 
 ---
 

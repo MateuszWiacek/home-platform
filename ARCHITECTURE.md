@@ -41,7 +41,7 @@ Jellyfin lives here on purpose: Intel Quick Sync makes transcoding cheap and pre
 | **OS** | Debian VM on Proxmox VE |
 | **Role** | CPU/RAM-hungry workloads |
 
-Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, and the utility tools do not belong on the NAS. AI inference, OCR, databases, media indexing, and heavier app stacks do not belong next to ZFS. The Ryzen takes the noisy work and can go down without taking core services with it.
+Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, the monitoring stack, and the utility tools do not belong on the NAS. AI inference, OCR, databases, media indexing, heavier app stacks, and monitoring storage do not belong next to ZFS. The Ryzen takes the noisy work and can go down without taking core services with it.
 
 ---
 
@@ -53,7 +53,7 @@ Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidra
 - **Storage first**: ZFS shouldn't crash because an app got hungry.
 - **Wife test**: non-technical household member can navigate without help. One dashboard, clean URLs, nothing breaks silently.
 
-> Public branch uses `homelab.local` as a placeholder. Real deployments need a registered domain for DNS-01 via Cloudflare.
+> Examples below use `homelab.local` for anonymity. In a real deployment, Cloudflare DNS-01 still requires a real registered domain.
 
 ---
 
@@ -86,16 +86,16 @@ Everything behind Traefik, HTTPS via Cloudflare DNS-01. No inbound router exposu
 | Service | URL | Node |
 |---|---|---|
 | Traefik dashboard | `http://10.0.0.10:8090` *(LAN-only)* | NAS |
-| Authentik | `https://authentik.homelab.local` | NAS |
-| AdGuard Home | `https://adguard.homelab.local` | NAS |
-| Vaultwarden | `https://vaultwarden.homelab.local` | NAS |
+| Authentik | `https://auth.homelab.local` | NAS |
+| AdGuard Home | `https://dns.homelab.local` | NAS |
+| Vaultwarden | `https://vault.homelab.local` | NAS |
 | Portainer | `https://portainer.homelab.local` | NAS |
-| Homepage | `https://homepage.homelab.local` | NAS |
-| Jellyfin | `https://jellyfin.homelab.local` | NAS |
-| Immich | `https://immich.homelab.local` | Ryzen VM |
-| Paperless-ngx | `https://paperless.homelab.local` | Ryzen VM |
-| Stirling-PDF | `https://stirling-pdf.homelab.local` | Ryzen VM |
-| IT-Tools | `https://it-tools.homelab.local` | Ryzen VM |
+| Homepage | `https://home.homelab.local` | NAS |
+| Jellyfin | `https://vod.homelab.local` | NAS |
+| Immich | `https://photos.homelab.local` | Ryzen VM |
+| Paperless-ngx | `https://docs.homelab.local` | Ryzen VM |
+| Stirling-PDF | `https://pdf.homelab.local` | Ryzen VM |
+| IT-Tools | `https://tools.homelab.local` | Ryzen VM |
 | Navidrome | `https://music.homelab.local` | Ryzen VM |
 | Audiobookshelf | `https://audiobooks.homelab.local` | Ryzen VM |
 | Calibre-Web | `https://books.homelab.local` | Ryzen VM |
@@ -104,10 +104,11 @@ Everything behind Traefik, HTTPS via Cloudflare DNS-01. No inbound router exposu
 | Mealie | `https://recipes.homelab.local` | Ryzen VM |
 | Linkwarden | `https://links.homelab.local` | Ryzen VM |
 | Syncthing | `https://sync.homelab.local` *(optional)* | Ryzen VM |
+| Grafana | `https://monitor.homelab.local` *(optional)* | Ryzen VM |
 | TrueNAS UI | `https://nas.homelab.local` | NAS |
-| Proxmox | `https://proxmox.homelab.local` | NAS -> Proxmox |
+| Proxmox | `https://pve.homelab.local` | NAS -> Proxmox |
 
-Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, and the utility tools run on the Ryzen VM but route through NAS Traefik via file provider. Docker socket provider only sees local containers. Syncthing is optional because its sync directory must exist on the NAS first.
+Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, Grafana, and the utility tools run on the Ryzen VM but route through NAS Traefik via file provider. Docker socket provider only sees local containers. Syncthing is optional because its sync directory must exist on the NAS first. Monitoring is optional because metrics are useful, but they are not part of the minimum viable homestack.
 
 ---
 
@@ -117,7 +118,7 @@ Traffic path from client to service:
 
 ```
                     ┌───────────────┐
-Client (LAN/WiFi) ->│ AdGuard (DNS) │ -> resolves service.<domain> -> 10.0.0.10
+Client (LAN/WiFi) ->│ AdGuard (DNS) │ -> resolves service.homelab.local -> 10.0.0.10
                     └──────┬────────┘
                            │
                            v
@@ -148,6 +149,9 @@ Two nodes, split by responsibility and power profile:
 │  Jellyfin   Homepage            │ NFS │  Calibre-Web  SiYuan             │
 │  Portainer                      │     │  Excalidraw   Mealie             │
 │                                 │     │  Linkwarden   Optional Syncthing │
+│                                 │     │  Grafana      Prometheus         │
+│                                 │     │  Alertmanager cAdvisor           │
+│                                 │     │  Node Exporter                   │
 │                                 │     │  Heavy CPU/RAM workloads         │
 │                                 │     │  Local NVMe for DB/cache data    │
 │  24/7, low power, ZFS storage   │     │                                  │
@@ -163,6 +167,8 @@ roles/
 ├── core_services/   # Traefik, AdGuard Home, Authentik, Vaultwarden, Portainer
 ├── media_stack/     # Jellyfin, Homepage
 ├── prod_apps/       # Immich, Paperless-ngx, DB backups
+├── monitoring_exporters/ # Node Exporter, cAdvisor
+├── monitoring_stack/ # Prometheus, Alertmanager, Grafana
 ├── navidrome/       # Navidrome music streaming
 ├── utility_tools/   # Stirling-PDF, IT-Tools
 ├── books_stack/     # Audiobookshelf, Calibre-Web

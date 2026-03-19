@@ -1,0 +1,15 @@
+---
+exporters_stack_dir: "{{ app_stacks_root | default('/opt') }}/monitoring-exporters"
+node_exporter_version: "v1.9.0"
+cadvisor_version: "v0.51.0"
+smartctl_exporter_enabled: false
+smartctl_exporter_version: "v0.14.0"
+node_exporter_port: 9100
+cadvisor_port: 9101
+smartctl_exporter_port: 9633
+smartctl_exporter_poll_interval: "2m"
+smartctl_exporter_rescan_interval: "15m"
+smartctl_exporter_device_exclude_regex: "^/dev/(loop|ram|fd|dm-|md|zd)"
+node_exporter_memory_limit: "64M"
+cadvisor_memory_limit: "128M"
+smartctl_exporter_memory_limit: "128M"

@@ -28,6 +28,7 @@ Data that takes real effort to recreate but is not irreplaceable.
 |---|---|---|
 | Immich PostgreSQL | Ryzen NVMe | Photo metadata, albums, face recognition data. Rebuildable from raw files, but reindexing and re-tagging takes time. |
 | Paperless PostgreSQL | Ryzen NVMe | Document metadata, tags, correspondents. Rebuildable from raw files via re-OCR, but manual tagging is lost. |
+| Linkwarden PostgreSQL | Ryzen NVMe | Bookmark metadata, tags, and collections. Archived page content still lives outside the DB. |
 | Authentik PostgreSQL | NAS SSD pool | Users, groups, policies, provider configs. Rebuildable from scratch, but reconfiguring SSO across all services is a full day of work. |
 | Authentik media | NAS SSD pool | Custom branding, icons. Low effort to recreate, but annoying. |
 
@@ -40,7 +41,7 @@ Data that can be recreated from code, config, or re-setup with minimal effort.
 | App configurations | Ansible roles + group_vars | Redeploy from repo |
 | Container images | Public registries | `docker compose pull` |
 | Navidrome / Audiobookshelf / Calibre-Web DBs | Local app state | Re-scan media libraries |
-| SiYuan / Excalidraw / Mealie / Linkwarden data | App-level storage | Accept loss or restore from manual export if available |
+| SiYuan / Excalidraw / Mealie / Linkwarden archive data | App-level storage | Accept loss or restore from manual export if available |
 | AI model caches (Immich ML) | Public model repos | Re-downloaded on first run |
 
 ---
@@ -51,6 +52,7 @@ Data that can be recreated from code, config, or re-setup with minimal effort.
 |---|---|---|---|---|
 | Immich PostgreSQL | `pg_dump` via `backup_dbs.sh` | Daily 03:00 | 28 days | NAS fast data pool |
 | Paperless PostgreSQL | `pg_dump` via `backup_dbs.sh` | Daily 03:00 | 28 days | NAS fast data pool |
+| Linkwarden PostgreSQL | `pg_dump` via `backup_dbs.sh` | Daily 03:00 | 28 days | NAS fast data pool |
 | Authentik PostgreSQL | `pg_dump` via SSH (optional) | Daily 03:00 | 28 days | NAS fast data pool |
 | Photos library | ZFS snapshots (TrueNAS) | TrueNAS snapshot schedule | Per TrueNAS config | Same pool (local snapshots) |
 | Documents archive | ZFS snapshots (TrueNAS) | TrueNAS snapshot schedule | Per TrueNAS config | Same pool (local snapshots) |
@@ -73,7 +75,7 @@ Being explicit about gaps is more useful than pretending they don't exist.
 | Vaultwarden `/data` | Covered by cold storage + cloud, but no automated script | **Medium.** Off-site copies exist, but backup frequency depends on manual discipline. Automating this is a priority. |
 | Authentik media | Low priority | Low. Custom branding, easily recreated. |
 | SiYuan notes | No export automation | Medium if actively used. Consider periodic manual export. |
-| Mealie / Linkwarden / Excalidraw data | No backup script | Low to medium. Accept loss or add manual exports. |
+| Mealie / Excalidraw / Linkwarden archive data | No backup script | Low to medium. Accept loss or add manual exports. |
 | Navidrome / Audiobookshelf / Calibre-Web DBs | Replaceable via library re-scan | Low. Media files are the source of truth, not the DB. |
 
 ---
@@ -115,7 +117,7 @@ Not an SLA - just honest expectations for how much data I can lose and how long 
 
 ## Restore procedures
 
-### PostgreSQL databases (Immich, Paperless, Authentik)
+### PostgreSQL databases (Immich, Paperless, Linkwarden, Authentik)
 
 ```bash
 # Find the backup
@@ -161,6 +163,7 @@ A backup that has never been tested is not a backup. It's a hope.
 |---|---|---|---|
 | Immich pg_dump restore | - | - | |
 | Paperless pg_dump restore | - | - | |
+| Linkwarden pg_dump restore | - | - | |
 | Vaultwarden `/data` restore | - | - | |
 | ZFS snapshot file recovery | - | - | |
 
@@ -173,5 +176,5 @@ A backup that has never been tested is not a backup. It's a hope.
 - [ ] Automate Vaultwarden backup to match tier 1 protection level (currently manual)
 - [ ] Schedule periodic restore tests (at least once per quarter)
 - [ ] Enable Authentik remote backup (requires SSH setup between nodes)
-- [ ] Evaluate whether SiYuan/Mealie/Linkwarden need backup automation based on actual usage
+- [ ] Evaluate whether SiYuan/Mealie/Linkwarden archive data needs backup automation based on actual usage
 - [ ] Publish Python backup module once stable

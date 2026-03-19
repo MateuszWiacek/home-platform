@@ -10,18 +10,18 @@ public_dns_servers:
 
 # === Public service domains ===
 traefik_domain: "traefik.{{ domain_name }}"
-authentik_domain: "authentik.{{ domain_name }}"
-adguard_domain: "adguard.{{ domain_name }}"
-vaultwarden_domain: "vaultwarden.{{ domain_name }}"
+authentik_domain: "auth.{{ domain_name }}"
+adguard_domain: "dns.{{ domain_name }}"
+vaultwarden_domain: "vault.{{ domain_name }}"
 portainer_domain: "portainer.{{ domain_name }}"
-homepage_domain: "homepage.{{ domain_name }}"
-jellyfin_domain: "jellyfin.{{ domain_name }}"
+homepage_domain: "home.{{ domain_name }}"
+jellyfin_domain: "vod.{{ domain_name }}"
 truenas_domain: "nas.{{ domain_name }}"
-proxmox_domain: "proxmox.{{ domain_name }}"
-paperless_domain: "paperless.{{ domain_name }}"
-immich_domain: "immich.{{ domain_name }}"
-stirling_pdf_domain: "stirling-pdf.{{ domain_name }}"
-it_tools_domain: "it-tools.{{ domain_name }}"
+proxmox_domain: "pve.{{ domain_name }}"
+paperless_domain: "docs.{{ domain_name }}"
+immich_domain: "photos.{{ domain_name }}"
+stirling_pdf_domain: "pdf.{{ domain_name }}"
+it_tools_domain: "tools.{{ domain_name }}"
 navidrome_domain: "music.{{ domain_name }}"
 audiobookshelf_domain: "audiobooks.{{ domain_name }}"
 calibre_web_domain: "books.{{ domain_name }}"
@@ -30,6 +30,7 @@ excalidraw_domain: "draw.{{ domain_name }}"
 mealie_domain: "recipes.{{ domain_name }}"
 syncthing_domain: "sync.{{ domain_name }}"
 linkwarden_domain: "links.{{ domain_name }}"
+grafana_domain: "monitor.{{ domain_name }}"
 
 # === Cross-node app ports ===
 immich_service_port: 2283
@@ -45,11 +46,15 @@ excalidraw_service_port: 3030
 mealie_service_port: 9925
 syncthing_service_port: 8384
 linkwarden_service_port: 3001
+grafana_service_port: 3000
+prometheus_service_port: 9090
+alertmanager_service_port: 9093
 
 # === Optional books stack toggles ===
 audiobookshelf_enabled: true
 calibre_web_enabled: true
 syncthing_enabled: true
+monitoring_enabled: true
 
 # === Authentication mode per service ===
 # Valid values: local, forwardauth, oidc
@@ -73,6 +78,7 @@ excalidraw_auth_mode: "forwardauth"
 mealie_auth_mode: "local"
 syncthing_auth_mode: "local"
 linkwarden_auth_mode: "local"
+grafana_auth_mode: "forwardauth"
 
 # === Homepage ===
 homepage_title: "My Homelab"

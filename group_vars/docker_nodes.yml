@@ -21,10 +21,10 @@ mnt_docs: "/mnt/nas_documents"
 mnt_media: "/mnt/nas_media"
 
 # === Production app versions ===
-# Prefer exact human-readable tags in the public branch.
-# Immich stays on `release` here because the same version var is used for two
-# different repositories with different tags.
-immich_version: "release"
+# Prefer exact upstream tags where they exist.
+# Immich server and machine-learning are kept on the same exact upstream tag
+# to avoid silent drift between the two images.
+immich_version: "v2.5.6"
 paperless_version: "2.20.7"
 stirling_pdf_version: "2.7.2"
 it_tools_version: "2024.10.22-7ca5933"
@@ -32,11 +32,18 @@ navidrome_version: "0.60.3"
 audiobookshelf_version: "2.33.0"
 calibre_web_version: "0.6.26-ls373"
 siyuan_version: "v3.6.0"
+# Intentional trade-off: upstream tags are still messy here, so keep `latest`
+# until there is a stable, verifiable tag mapping for the image we actually run.
 excalidraw_version: "latest"
 mealie_version: "v3.12.0"
 syncthing_version: "v2.0.15-ls211"
 linkwarden_version: "v2.13.5"
 linkwarden_postgres_image: "docker.io/library/postgres:16-alpine"
+node_exporter_version: "v1.9.0"
+cadvisor_version: "v0.51.0"
+prometheus_version: "v3.3.1"
+grafana_version: "11.6.0"
+alertmanager_version: "v0.28.1"
 
 # Internal dependencies (override only if required)
 # WARNING: pgvecto-rs is deprecated for Immich v2.x+.

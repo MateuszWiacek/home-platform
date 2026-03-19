@@ -1,0 +1,11 @@
+---
+# Media stack defaults. The NAS group overrides image tags with pinned versions.
+media_stack_root: "{{ docker_config_dir }}"
+
+homepage_enabled: true
+homepage_version: "latest"
+homepage_stack_dir: "{{ media_stack_root }}/homepage"
+
+jellyfin_enabled: true
+jellyfin_version: "latest"
+jellyfin_stack_dir: "{{ media_stack_root }}/jellyfin"

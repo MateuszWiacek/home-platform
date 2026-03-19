@@ -1,0 +1,52 @@
+{% set nas_host = groups['n100'][0] %}
+{% set nas_smartctl_enabled = hostvars[nas_host].smartctl_exporter_enabled | default(false) | bool %}
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+  scrape_timeout: 10s
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - "alertmanager:9093"
+
+rule_files:
+  - "/etc/prometheus/alert_rules.yml"
+
+scrape_configs:
+  - job_name: "node_exporter"
+    static_configs:
+      - targets:
+          - "{{ nas_ip }}:{{ node_exporter_port }}"
+        labels:
+          instance: "nas"
+      - targets:
+          - "{{ ryzen_ip }}:{{ node_exporter_port }}"
+        labels:
+          instance: "ryzen"
+
+  - job_name: "cadvisor"
+    static_configs:
+      - targets:
+          - "{{ nas_ip }}:{{ cadvisor_port }}"
+        labels:
+          instance: "nas"
+      - targets:
+          - "{{ ryzen_ip }}:{{ cadvisor_port }}"
+        labels:
+          instance: "ryzen"
+
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "localhost:9090"
+
+{% if nas_smartctl_enabled %}
+  - job_name: "smartctl"
+    static_configs:
+      - targets:
+          - "{{ nas_ip }}:{{ hostvars[nas_host].smartctl_exporter_port | default(9633) }}"
+        labels:
+          instance: "nas"
+{% endif %}

@@ -4,6 +4,9 @@
 authentik_outpost_url: "http://authentik-server:9000/outpost.goauthentik.io/auth/traefik"
 authentik_postgres_image: "docker.io/library/postgres:16-alpine"
 authentik_redis_image: "docker.io/library/redis:alpine"
+authentik_postgres_max_connections: "50"
+authentik_postgres_memory_limit: "512M"
+authentik_postgres_shm_size: "256m"
 authentik_uid: "1000"
 authentik_gid: "1000"
 

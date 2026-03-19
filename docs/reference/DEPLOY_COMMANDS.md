@@ -61,6 +61,7 @@ ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags excalidraw
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags mealie
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags linkwarden
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags syncthing
+ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags monitoring
 ```
 
 ---
@@ -70,6 +71,19 @@ ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags syncthing
 ```bash
 ansible-playbook -i inventory.ini deploy_n100.yml --tags hardening
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags hardening
+```
+
+---
+
+## Monitoring
+
+```bash
+# Monitoring is already enabled in the repo.
+# Only make sure vault_grafana_admin_password exists in secrets.yml.
+# NAS disk health also depends on smartctl_exporter on the NAS.
+
+ansible-playbook -i inventory.ini deploy_n100.yml --tags monitoring
+ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags monitoring
 ```
 
 ---

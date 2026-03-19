@@ -23,7 +23,7 @@ ansible-playbook -i inventory.ini deploy_n100.yml --tags adguard
 
 ## AdGuard Home: 502 after first deploy
 
-**Symptom:** `https://adguard.homelab.local` returns 502 right after fresh deploy.
+**Symptom:** `https://dns.homelab.local` returns 502 right after fresh deploy.
 
 **Cause:** First boot uses setup wizard on `:3000`. Traefik forwards to `:80`. Wizard hasn't run yet.
 
@@ -104,7 +104,7 @@ This repo now forces Traefik recreation on config changes, so `deploy_n100.yml` 
 
 ## Traefik: cannot route to Immich/Paperless on Ryzen
 
-**Symptom:** `immich.homelab.local` / `paperless.homelab.local` return 404 from Traefik.
+**Symptom:** `photos.homelab.local` / `docs.homelab.local` return 404 from Traefik.
 
 **Cause:** Docker provider is local-only (NAS socket). Ryzen services must be exposed through Traefik file provider routes.
 
@@ -183,6 +183,102 @@ sudo docker compose -f /mnt/example_apps/appdata/docker/config/authentik/docker-
 
 ---
 
+## Authentik PostgreSQL: OOM kill and restart loop
+
+**Symptom:** `auth.homelab.local` starts returning `502`, `authentik-server` enters a restart loop, and `dmesg` shows `Memory cgroup out of memory: Killed process ... (postgres)`.
+
+**Cause:** Authentik Postgres can exceed a tight memory cap during recovery, outpost churn, or heavy write bursts. Raising `max_connections` does not help here. It makes the memory ceiling problem worse.
+
+**Fix:** Keep Authentik Postgres on a lower connection ceiling and a larger memory limit. This repo uses:
+
+```yaml
+command: ["postgres", "-c", "max_connections=50"]
+deploy:
+  resources:
+    limits:
+      memory: 512M
+```
+
+If the crash already happened:
+
+```bash
+ssh admin@10.0.0.10
+sudo dmesg -T | egrep -i 'oom|killed process|out of memory'
+sudo docker logs --tail 120 authentik-db
+sudo docker logs --tail 80 authentik-server
+```
+
+If you also see index corruption errors such as `heap tid from index tuple`, reindex before restarting everything:
+
+```bash
+cd /mnt/example_apps/appdata/docker/config/authentik
+sudo docker compose -f docker-compose.yml -f ldap-outpost.yml stop server worker authentik-ldap-outpost
+sudo docker exec -it authentik-db psql -U authentik -d authentik -c "REINDEX INDEX authentik_tasks_task_pkey;"
+sudo docker exec -it authentik-db psql -U authentik -d authentik -c "REINDEX INDEX authentik_t_message_affe69_idx;"
+sudo docker compose -f docker-compose.yml -f ldap-outpost.yml up -d
+```
+
+---
+
+## Authentik PostgreSQL: `VACUUM` fails with `No space left on device`
+
+**Symptom:** `VACUUM ANALYZE django_channels_postgres_message;` fails with:
+`could not resize shared memory segment ... No space left on device`
+
+**Cause:** This is usually Docker shared memory pressure, not a full dataset. PostgreSQL maintenance needs `/dev/shm`, and default container settings can be too small for large cleanup passes.
+
+**Fix:** Run the maintenance pass without parallel workers, then keep a larger `shm_size` for Authentik Postgres. This repo uses `authentik_postgres_shm_size: "256m"`.
+
+```bash
+sudo docker exec authentik-db psql -U authentik -d authentik -c "VACUUM (ANALYZE, PARALLEL 0) django_channels_postgres_message;"
+sudo docker exec authentik-db psql -U authentik -d authentik -c "VACUUM (ANALYZE, PARALLEL 0) django_postgres_cache_cacheentry;"
+```
+
+If cleanup is still too heavy, delete expired rows in batches first, then rerun `VACUUM (ANALYZE, PARALLEL 0)`.
+
+---
+
+## Authentik worker pressure: expired channels and task backlog
+
+**Symptom:** Authentik stays up, but `authentik-worker` runs hot, task queue keeps growing, and logs show heavy scheduler churn or repeated cleanup retries.
+
+**Cause:** Two things tend to combine here:
+
+- `django_channels_postgres_message` accumulates expired rows
+- `authentik_tasks_task` keeps a large historical backlog, often dominated by `proxy_on_logout` and `outpost_session_end`
+
+Expired channel rows can block cleanup work long enough for the worker to spend most of its time on maintenance instead of draining the queue.
+
+**Fix:** Clean expired channel rows first, not the task table.
+
+```bash
+sudo docker exec authentik-db psql -U authentik -d authentik -c "
+WITH doomed AS (
+  SELECT ctid
+  FROM django_channels_postgres_message
+  WHERE expires < NOW()
+  LIMIT 50000
+)
+DELETE FROM django_channels_postgres_message
+WHERE ctid IN (SELECT ctid FROM doomed);
+"
+
+sudo docker exec authentik-db psql -U authentik -d authentik -c "VACUUM (ANALYZE, PARALLEL 0) django_channels_postgres_message;"
+```
+
+Then verify:
+
+```bash
+sudo docker exec authentik-db psql -U authentik -d authentik -At -c "
+SELECT COUNT(*) FROM django_channels_postgres_message WHERE expires < NOW();
+SELECT state || E'\t' || COUNT(*) FROM authentik_tasks_task GROUP BY state ORDER BY COUNT(*) DESC;
+"
+```
+
+Do not start by deleting queued tasks blindly. Let the worker recover first, then decide whether old queued proxy/logout jobs still need manual cleanup.
+
+---
+
 ## SiYuan: restarts with `addgroup: permission denied`
 
 **Symptom:** `siyuan` never becomes reachable, Traefik returns 502, logs show `addgroup: permission denied (are you root?)`.
@@ -236,8 +332,8 @@ sudo killall -HUP mDNSResponder
 
 **Verify:** Use system-level resolution, not only `dig`:
 ```bash
-dscacheutil -q host -a name immich.homelab.local
-curl -kI https://immich.homelab.local
+dscacheutil -q host -a name photos.homelab.local
+curl -kI https://photos.homelab.local
 ```
 
 If `dig` works but `curl` still does not, also check for `iCloud Private Relay`, `Limit IP Address Tracking`, or a VPN overriding DNS on the Mac.
@@ -300,7 +396,7 @@ Without this, clients may resolve to public IP and bypass the local path. VPN cl
 
 ## Homepage widgets: Ryzen services use direct IP
 
-Homepage widgets for Immich and Paperless use direct Ryzen IP (`http://10.0.0.30:PORT`) instead of their public domains (`https://immich.homelab.local`).
+Homepage widgets for Immich and Paperless use direct Ryzen IP (`http://10.0.0.30:PORT`) instead of their public domains (`https://photos.homelab.local`).
 
 This is intentional. Homepage runs on the NAS and queries widget APIs server-side. Routing through the public domain would mean NAS -> AdGuard DNS -> Traefik -> Ryzen, adding an unnecessary hop and a dependency on Traefik being healthy just to display widget data.
 

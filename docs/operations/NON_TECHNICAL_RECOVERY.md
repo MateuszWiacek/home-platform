@@ -1,13 +1,13 @@
 # Non-Technical Recovery
 
-If something stopped working and the administrator is not around, try these steps in order.
+If something stopped working and the maintainer is not around, try these steps in order.
 No terminal needed.
 
 ---
 
 ## Step 1: Check the dashboard
 
-Open [https://homepage.homelab.local](https://homepage.homelab.local) in your browser.
+Open [https://home.homelab.local](https://home.homelab.local) in your browser.
 If it loads, you can see which services are up or down.
 
 ---
@@ -28,10 +28,10 @@ If it loads, you can see which services are up or down.
 The NAS (small box, always on) probably needs a restart:
 1. Physically restart the NAS
 2. Wait 3-5 minutes
-3. Try the dashboard again: [https://homepage.homelab.local](https://homepage.homelab.local)
+3. Try the dashboard again: [https://home.homelab.local](https://home.homelab.local)
 
 ---
 
 ## Step 4: Still broken
 
-Call or message the administrator. Take a photo of any error message visible on screen - it helps a lot.
+Contact the maintainer. Take a photo of any error message visible on screen - it helps a lot.

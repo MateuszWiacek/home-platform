@@ -40,6 +40,17 @@ else
   ERRORS=$((ERRORS + 1))
 fi
 
+# --- Linkwarden (runs on Ryzen) ---
+echo "[$(date '+%H:%M:%S')] Starting Linkwarden database backup..."
+if docker exec {{ linkwarden_db_container | default('linkwarden_db') }} \
+  pg_dump -U {{ vault_linkwarden_db_user | default('linkwarden') }} {{ vault_linkwarden_db_name | default('linkwarden') }} \
+  | gzip > "$BACKUP_DIR/linkwarden_$DATE.sql.gz"; then
+  echo "[$(date '+%H:%M:%S')] Linkwarden backup OK ($(du -h "$BACKUP_DIR/linkwarden_$DATE.sql.gz" | cut -f1))"
+else
+  echo "[$(date '+%H:%M:%S')] ERROR: Linkwarden backup failed!" >&2
+  ERRORS=$((ERRORS + 1))
+fi
+
 {% if enable_authentik_remote_backup %}
 # --- Authentik (runs on NAS — remote pg_dump via SSH) ---
 # SSO database is critical infrastructure. Without this backup, an Authentik

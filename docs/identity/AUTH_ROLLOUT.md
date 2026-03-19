@@ -10,27 +10,28 @@ Implementation status and rollout plan. For the target model, see [`AUTH_MODEL.m
 - Auth mode values are configured in `group_vars/all.yml`.
 - Defaults remain `local` for every service until migration is done deliberately.
 
-### What's implemented in this repo
+### What is implemented in the reference deployment
 
 | Service | Auth mode | Status |
 |---|---|---|
-| AdGuard | ForwardAuth | Implemented |
-| Portainer | ForwardAuth | Implemented |
-| Homepage | ForwardAuth | Implemented |
-| Excalidraw | ForwardAuth | Implemented |
-| IT-Tools | ForwardAuth | Implemented |
-| Stirling-PDF | ForwardAuth | Implemented |
+| AdGuard | ForwardAuth | Active |
+| Portainer | ForwardAuth | Active |
+| Homepage | ForwardAuth | Active |
+| Excalidraw | ForwardAuth | Active |
+| IT-Tools | ForwardAuth | Active |
+| Stirling-PDF | ForwardAuth | Active |
+| Grafana | ForwardAuth | Implemented when `monitoring_enabled: true` |
 
-### Native OIDC currently implemented
+### Native OIDC implemented in the reference deployment
 
 | Service | Auth mode | Status |
 |---|---|---|
-| Immich | Native OIDC | Implemented |
-| Paperless-ngx | Native OIDC | Implemented |
+| Immich | Native OIDC | Active |
+| Paperless-ngx | Native OIDC | Active |
 
 ### ForwardAuth wiring status
 
-Wired in Traefik config: AdGuard, Portainer, Homepage, Excalidraw, Stirling-PDF, IT-Tools, Paperless-ngx, Immich.
+Wired in Traefik config: AdGuard, Portainer, Homepage, Excalidraw, Stirling-PDF, IT-Tools, Grafana, Paperless-ngx, Immich.
 
 Not yet wired: Mealie, Linkwarden, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Syncthing.
 
@@ -38,12 +39,13 @@ Not yet wired: Mealie, Linkwarden, Navidrome, Audiobookshelf, Calibre-Web, SiYua
 
 | Service | Authentik object | What must be configured |
 |---|---|---|
-| AdGuard | Proxy Provider + Application | `External host: https://adguard.homelab.local`, assigned to proxy outpost |
+| AdGuard | Proxy Provider + Application | `External host: https://dns.homelab.local`, assigned to proxy outpost |
 | Portainer | Proxy Provider + Application | `External host: https://portainer.homelab.local`, assigned to proxy outpost |
-| Homepage | Proxy Provider + Application | `External host: https://homepage.homelab.local`, assigned to proxy outpost |
+| Homepage | Proxy Provider + Application | `External host: https://home.homelab.local`, assigned to proxy outpost |
 | Excalidraw | Proxy Provider + Application | `External host: https://draw.homelab.local`, assigned to proxy outpost |
-| IT-Tools | Proxy Provider + Application | `External host: https://it-tools.homelab.local`, assigned to proxy outpost |
-| Stirling-PDF | Proxy Provider + Application | `External host: https://stirling-pdf.homelab.local`, assigned to proxy outpost |
+| IT-Tools | Proxy Provider + Application | `External host: https://tools.homelab.local`, assigned to proxy outpost |
+| Stirling-PDF | Proxy Provider + Application | `External host: https://pdf.homelab.local`, assigned to proxy outpost |
+| Grafana | Proxy Provider + Application | `External host: https://monitor.homelab.local`, assigned to proxy outpost when monitoring is enabled |
 | Immich | OAuth2/OpenID Provider + Application | Redirect URI and client secret, no proxy outpost assignment needed |
 | Paperless-ngx | OAuth2/OpenID Provider + Application | Redirect URI and client secret, no proxy outpost assignment needed |
 
@@ -96,7 +98,7 @@ Existing native OIDC app toggles now respect auth mode in:
 
 ### Phase 2 - Finish ForwardAuth for browser-only tools (completed)
 
-All Wave 1 services are implemented in this repo.
+All Wave 1 services are implemented in the reference deployment.
 
 ### Phase 3 - Extend native OIDC where it delivers the most value
 
@@ -144,7 +146,8 @@ For each application, follow the [OIDC setup pattern](OIDC_SETUP.md).
 
 ## Repo gaps to close
 
+- Move selected services from `local` to `forwardauth` or `oidc` in `group_vars/all.yml`
 - Add missing OIDC secret placeholders for planned services
 - Extend incident response with redirect URI notes and break-glass steps per service
 - Decide whether Navidrome and Calibre-Web are worth central auth at all
-- Add per-service login verification notes for browser and mobile clients
+- Remove any remaining legacy docs references to the old global toggle

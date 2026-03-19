@@ -1,7 +1,7 @@
 services:
   immich-server:
     container_name: immich_server
-    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-v2.5.6}
     volumes:
       # Heavy originals on NAS HDD
       - {{ mnt_photos }}:/usr/src/app/upload
@@ -20,7 +20,7 @@ services:
 
   immich-machine-learning:
     container_name: immich_machine_learning
-    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-v2.5.6}
     volumes:
       # AI Models kept locally on Ryzen NVMe to avoid 1Gbit bottleneck during startup/processing
       - {{ immich_model_cache_dir }}:/cache

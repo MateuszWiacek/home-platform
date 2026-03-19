@@ -1,0 +1,9 @@
+---
+- name: "Validate | Grafana admin password is defined"
+  ansible.builtin.assert:
+    that:
+      - vault_grafana_admin_password is defined
+      - vault_grafana_admin_password | length > 0
+    fail_msg: >-
+      Grafana requires vault_grafana_admin_password in secrets.yml.
+    quiet: true

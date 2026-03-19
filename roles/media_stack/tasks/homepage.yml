@@ -1,14 +1,14 @@
 ---
 - name: "Homepage | Create configuration directory"
   ansible.builtin.file:
-    path: "{{ docker_config_dir }}/homepage"
+    path: "{{ homepage_stack_dir }}"
     state: directory
     mode: '0755'
 
 - name: "Homepage | Deploy public configuration files"
   ansible.builtin.template:
     src: "homepage/{{ item }}.j2"
-    dest: "{{ docker_config_dir }}/homepage/{{ item }}"
+    dest: "{{ homepage_stack_dir }}/{{ item }}"
     mode: '0644'
   loop:
     - "widgets.yaml"
@@ -18,7 +18,7 @@
 - name: "Homepage | Deploy services configuration (contains widget credentials)"
   ansible.builtin.template:
     src: "homepage/services.yaml.j2"
-    dest: "{{ docker_config_dir }}/homepage/services.yaml"
+    dest: "{{ homepage_stack_dir }}/services.yaml"
     mode: '0600'
   no_log: true
   notify: Restart Homepage
@@ -26,11 +26,11 @@
 - name: "Homepage | Deploy docker-compose file"
   ansible.builtin.template:
     src: "homepage/docker-compose.yml.j2"
-    dest: "{{ docker_config_dir }}/homepage/docker-compose.yml"
+    dest: "{{ homepage_stack_dir }}/docker-compose.yml"
     mode: '0644'
 
 - name: "Homepage | Start container"
   ansible.builtin.shell:
     cmd: "docker compose up -d --remove-orphans"
-    chdir: "{{ docker_config_dir }}/homepage"
+    chdir: "{{ homepage_stack_dir }}"
   changed_when: false

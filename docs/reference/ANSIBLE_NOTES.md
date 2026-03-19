@@ -17,7 +17,11 @@ This repo uses `import_tasks` by default for clarity.
 
 - Handler runs once at end of play, even if notified multiple times
 - Handler only fires on `changed`, not `ok`
-- All handlers in this repo use shell-based `docker compose up -d --remove-orphans` pattern for consistency
+- Most handlers in this repo use shell-based `docker compose up -d --remove-orphans`
+- Two exceptions intentionally use `--force-recreate`:
+  - `Traefik`, because file-provider and proxy config changes must be picked up reliably on restart
+  - `monitoring_stack`, because Prometheus and Grafana were not reliably reloading bind-mounted config changes with a plain `up -d`
+- If you add another `--force-recreate` handler, document the reason in the role or in this file
 
 ---
 

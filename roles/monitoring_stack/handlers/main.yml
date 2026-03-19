@@ -1,0 +1,6 @@
+---
+- name: Restart monitoring stack
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --force-recreate --remove-orphans"
+    chdir: "{{ monitoring_stack_dir }}"
+  when: not ansible_check_mode

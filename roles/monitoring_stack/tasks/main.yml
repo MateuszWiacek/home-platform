@@ -1,0 +1,131 @@
+---
+- name: "Monitoring Stack | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "Monitoring Stack | Create stack directories"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: '0755'
+  loop:
+    - "{{ monitoring_stack_dir }}"
+    - "{{ prometheus_data_dir }}"
+    - "{{ grafana_data_dir }}"
+    - "{{ alertmanager_data_dir }}"
+    - "{{ monitoring_stack_dir }}/config"
+    - "{{ grafana_dashboards_dir }}"
+    - "{{ monitoring_stack_dir }}/config/grafana/provisioning/datasources"
+    - "{{ monitoring_stack_dir }}/config/grafana/provisioning/dashboards"
+    - "{{ monitoring_stack_dir }}/config/grafana/provisioning/plugins"
+    - "{{ monitoring_stack_dir }}/config/grafana/provisioning/alerting"
+
+- name: "Monitoring Stack | Check Grafana data directory state"
+  ansible.builtin.stat:
+    path: "{{ grafana_data_dir }}"
+  register: _grafana_data_dir
+
+- name: "Monitoring Stack | Check Prometheus data directory state"
+  ansible.builtin.stat:
+    path: "{{ prometheus_data_dir }}"
+  register: _prometheus_data_dir
+
+- name: "Monitoring Stack | Check Alertmanager data directory state"
+  ansible.builtin.stat:
+    path: "{{ alertmanager_data_dir }}"
+  register: _alertmanager_data_dir
+
+- name: "Monitoring Stack | Fix Grafana data directory ownership"
+  ansible.builtin.file:
+    path: "{{ grafana_data_dir }}"
+    owner: "472"
+    group: "472"
+    mode: '0755'
+  when: not ansible_check_mode or _grafana_data_dir.stat.exists
+
+- name: "Monitoring Stack | Fix Prometheus data directory ownership"
+  ansible.builtin.file:
+    path: "{{ prometheus_data_dir }}"
+    owner: "65534"
+    group: "65534"
+    mode: '0755'
+  when: not ansible_check_mode or _prometheus_data_dir.stat.exists
+
+- name: "Monitoring Stack | Fix Alertmanager data directory ownership"
+  ansible.builtin.file:
+    path: "{{ alertmanager_data_dir }}"
+    owner: "65534"
+    group: "65534"
+    mode: '0755'
+  when: not ansible_check_mode or _alertmanager_data_dir.stat.exists
+
+- name: "Monitoring Stack | Deploy docker-compose"
+  ansible.builtin.template:
+    src: "docker-compose.yml.j2"
+    dest: "{{ monitoring_stack_dir }}/docker-compose.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+
+- name: "Monitoring Stack | Deploy Prometheus config"
+  ansible.builtin.template:
+    src: "prometheus/prometheus.yml.j2"
+    dest: "{{ monitoring_stack_dir }}/config/prometheus.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+
+- name: "Monitoring Stack | Deploy Prometheus alert rules"
+  ansible.builtin.template:
+    src: "prometheus/alert_rules.yml.j2"
+    dest: "{{ monitoring_stack_dir }}/config/alert_rules.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+
+- name: "Monitoring Stack | Deploy Alertmanager config"
+  ansible.builtin.template:
+    src: "alertmanager/alertmanager.yml.j2"
+    dest: "{{ monitoring_stack_dir }}/config/alertmanager.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+
+- name: "Monitoring Stack | Deploy Grafana datasource provisioning"
+  ansible.builtin.template:
+    src: "grafana/provisioning/datasources/datasources.yml.j2"
+    dest: "{{ monitoring_stack_dir }}/config/grafana/provisioning/datasources/datasources.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+
+- name: "Monitoring Stack | Deploy Grafana dashboard provisioning"
+  ansible.builtin.template:
+    src: "grafana/provisioning/dashboards/dashboards.yml.j2"
+    dest: "{{ monitoring_stack_dir }}/config/grafana/provisioning/dashboards/dashboards.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+
+- name: "Monitoring Stack | Deploy Grafana dashboards"
+  ansible.builtin.copy:
+    src: "grafana/dashboards/{{ item.src }}"
+    dest: "{{ grafana_dashboards_dir }}/{{ item.dest }}"
+    mode: '0644'
+  loop:
+    - src: "homelab-overview.json"
+      dest: "homelab-overview.json"
+    - src: "containers-overview.json"
+      dest: "containers-overview.json"
+  notify: Restart monitoring stack
+
+- name: "Monitoring Stack | Deploy templated Grafana dashboards"
+  ansible.builtin.template:
+    src: "grafana/dashboards/{{ item.src }}"
+    dest: "{{ grafana_dashboards_dir }}/{{ item.dest }}"
+    mode: '0644'
+  loop:
+    - src: "nas-critical-signals.json.j2"
+      dest: "nas-critical-signals.json"
+  notify: Restart monitoring stack
+
+- name: "Monitoring Stack | Start containers"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ monitoring_stack_dir }}"
+  changed_when: false
+  when: not ansible_check_mode

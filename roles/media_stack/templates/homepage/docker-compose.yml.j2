@@ -9,7 +9,7 @@ services:
     networks:
       - proxy_net
     volumes:
-      - {{ docker_config_dir }}/homepage:/app/config
+      - {{ homepage_stack_dir }}:/app/config
       - /var/run/docker.sock:/var/run/docker.sock:ro
     labels:
       - "traefik.enable=true"

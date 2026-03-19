@@ -33,3 +33,9 @@
       when: syncthing_enabled | default(false)
     - role: linkwarden
       tags: ['linkwarden']
+    - role: monitoring_exporters
+      tags: ['monitoring', 'exporters']
+      when: monitoring_enabled | default(false) | bool
+    - role: monitoring_stack
+      tags: ['monitoring', 'monitoring_stack']
+      when: monitoring_enabled | default(false) | bool

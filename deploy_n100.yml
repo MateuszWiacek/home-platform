@@ -15,3 +15,6 @@
       tags: ['core']
     - role: media_stack  # Jellyfin, Homepage
       tags: ['media']
+    - role: monitoring_exporters
+      tags: ['monitoring', 'exporters']
+      when: monitoring_enabled | default(false) | bool

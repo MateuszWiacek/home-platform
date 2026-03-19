@@ -13,8 +13,9 @@ docker_data_dir: "{{ docker_root_dir }}/data"
 # HDD Pool
 media_root_dir: "/mnt/example_storage/media"
 
-# === Traefik compatibility (production/main naming & access) ===
-# Pin exact tags in the public branch for readability and reproducible deploys.
+# === Traefik compatibility (publication naming & access) ===
+# Use exact upstream tags where they exist. They are easier to review than digests
+# while still avoiding floating `latest` updates for core services.
 traefik_version: "v3.6.8"
 traefik_publish_api_port: true
 traefik_dashboard_via_router: false
@@ -42,6 +43,13 @@ jellyfin_version: "10.11.6ubu2404-ls20"
 
 # === Homepage ===
 homepage_version: "v1.10.1"
+
+# === Monitoring exporters ===
+exporters_stack_dir: "{{ docker_config_dir }}/monitoring-exporters"
+node_exporter_version: "v1.9.0"
+cadvisor_version: "v0.51.0"
+smartctl_exporter_enabled: true
+smartctl_exporter_version: "v0.14.0"
 
 # === AdGuard compatibility ===
 # Keep setup mode disabled by default. Enable only for first-run wizard, then disable again.

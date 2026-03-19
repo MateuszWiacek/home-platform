@@ -40,6 +40,7 @@ For setup instructions, see [`FORWARDAUTH_SETUP.md`](FORWARDAUTH_SETUP.md), [`OI
 | Stirling-PDF | Ryzen | ForwardAuth | Admin-style web UI; simple fit |
 | IT-Tools | Ryzen | ForwardAuth | Stateless browser-only tool |
 | Excalidraw | Ryzen | ForwardAuth | Browser-only collaborative tool |
+| Grafana | Ryzen | ForwardAuth | Browser-only monitoring UI |
 | Navidrome | Ryzen | Local (for now) | Subsonic clients make proxy auth risky |
 | Audiobookshelf | Ryzen | Native OIDC | Better long-term fit if clients still work cleanly |
 | Calibre-Web | Ryzen | Local (for now) | Lower value than other OIDC targets |
@@ -50,9 +51,9 @@ For setup instructions, see [`FORWARDAUTH_SETUP.md`](FORWARDAUTH_SETUP.md), [`OI
 
 ---
 
-## Current live auth-mode values
+## Current example auth-mode values
 
-Auth mode is configured per service in `group_vars/all.yml`. Current values in this branch:
+Auth mode is configured per service in `group_vars/all.yml`. The example values in this branch are:
 
 ```yaml
 adguard_auth_mode: forwardauth
@@ -67,6 +68,7 @@ paperless_auth_mode: oidc
 stirling_pdf_auth_mode: forwardauth
 it_tools_auth_mode: forwardauth
 excalidraw_auth_mode: forwardauth
+grafana_auth_mode: forwardauth
 navidrome_auth_mode: local
 audiobookshelf_auth_mode: local
 calibre_web_auth_mode: local
@@ -78,13 +80,13 @@ linkwarden_auth_mode: local
 
 Default for all services is `local`. Services move to `forwardauth` or `oidc` deliberately, never by accident.
 
-This document shows both what is already implemented in this branch and what remains staged for later.
+The target model in this document is broader than the current rollout, but Wave 1 and Wave 2 are already implemented in the reference deployment.
 
 Benefits of per-service mode:
 - No accidental lockout from a single global flag
 - Clear documentation of intended auth per service
 - Easier future rollout and safer rollback
-- Current production behavior stays stable until you intentionally change a service
+- Current branch behavior stays stable until you intentionally change a service
 
 ---
 
