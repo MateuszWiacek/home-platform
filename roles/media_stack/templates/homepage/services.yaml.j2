@@ -12,7 +12,7 @@
 {% if truenas_api_key is defined and (truenas_api_key | length) > 0 %}
         widget:
           type: truenas
-          url: "{{ truenas_widget_url }}"
+          url: "{{ truenas_internal_url }}"
           key: "{{ truenas_api_key }}"
           verify: false
 {% endif %}
@@ -29,12 +29,6 @@
         icon: authentik.png
         href: "https://{{ authentik_domain }}"
         description: "SSO & Identity Provider"
-{% if authentik_api_token is defined and (authentik_api_token | length) > 0 %}
-        widget:
-          type: authentik
-          url: "{{ authentik_internal_url }}"
-          key: "{{ authentik_api_token }}"
-{% endif %}
 
     - AdGuard Home:
         icon: adguard-home.png
