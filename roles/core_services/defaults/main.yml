@@ -11,7 +11,7 @@ authentik_uid: "1000"
 authentik_gid: "1000"
 
 # Traefik defaults (override in group_vars for environment-specific behavior)
-# Pin to v3.6.8+ — first release line with auto-negotiated Docker API version.
+# Pin to v3.6.8+ - first release line with auto-negotiated Docker API version.
 # Keep this aligned with the branch-level override unless intentionally testing
 # a newer Traefik build.
 traefik_version: "v3.6.8"

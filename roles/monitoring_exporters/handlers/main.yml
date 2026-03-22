@@ -1,6 +1,6 @@
 ---
 - name: Restart monitoring exporters
   ansible.builtin.shell:
-    cmd: "docker compose up -d --remove-orphans"
+    cmd: "docker compose up -d --force-recreate --remove-orphans"
     chdir: "{{ exporters_stack_dir }}"
   when: not ansible_check_mode

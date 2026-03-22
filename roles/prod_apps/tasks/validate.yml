@@ -31,15 +31,3 @@
       Cannot reach NAS at {{ nas_ip }}:2049 (NFS).
       Verify the NAS is online and NFS shares are exported.
     quiet: true
-
-- name: "Validate | Authentik remote backup prerequisites"
-  ansible.builtin.assert:
-    that:
-      - nas_backup_ssh_user | length > 0
-      - nas_backup_ssh_key_path | length > 0
-      - nas_backup_ssh_key_path is match('^/')
-    fail_msg: >-
-      enable_authentik_remote_backup requires nas_backup_ssh_user and an
-      absolute nas_backup_ssh_key_path. See docs/reference/VARIABLES.md for details.
-    quiet: true
-  when: enable_authentik_remote_backup | default(false)

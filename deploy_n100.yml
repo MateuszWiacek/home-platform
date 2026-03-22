@@ -8,13 +8,17 @@
     - secrets.yml
 
   roles:
-    # TrueNAS SCALE ships with Docker — no host-install role required here.
+    # TrueNAS SCALE ships with Docker - no host-install role required here.
     - role: ssh_hardening
       tags: ['security', 'ssh', 'hardening']
     - role: core_services  # Traefik, AdGuard, Authentik, Vaultwarden, Portainer
       tags: ['core']
     - role: media_stack  # Jellyfin, Homepage
       tags: ['media']
+    - role: ntfy
+      tags: ['ntfy']
     - role: monitoring_exporters
       tags: ['monitoring', 'exporters']
       when: monitoring_enabled | default(false) | bool
+    - role: archwright
+      tags: ['backups', 'archwright']

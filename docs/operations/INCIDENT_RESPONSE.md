@@ -197,6 +197,31 @@ WHERE ctid IN (SELECT ctid FROM doomed);
 
 Repeat until the expired count reaches zero, then re-check worker CPU and queued task count. Only consider direct task-queue cleanup if the backlog still does not move after channel cleanup.
 
+Before purging queued tasks, check whether one channel group is doing something stupid:
+
+```bash
+sudo docker exec authentik-db psql -U authentik -d authentik -At -F $'\t' -c "
+SELECT group_key, COUNT(*)
+FROM django_channels_postgres_groupchannel
+GROUP BY group_key
+ORDER BY COUNT(*) DESC
+LIMIT 5;
+"
+```
+
+If the biggest group is in the hundreds while the rest are small, treat that as suspicious. In this stack the real root cause was stale memberships in the embedded proxy outpost shared group. Every `proxy_on_logout` and `outpost_session_end` task was fanning out into dead channels.
+
+What worked:
+
+- back up the DB first
+- keep the live channel row
+- delete stale rows from that one oversized group
+- delete expired rows from `django_channels_postgres_message`
+- `VACUUM (ANALYZE, PARALLEL 0)` both channel tables
+- then watch whether queue depth starts falling on its own
+
+That was enough to stop the storm here. After that, the queue drained normally.
+
 For the first queue cleanup pass, stay conservative:
 
 - purge only stale queued jobs older than `14 days`
@@ -210,6 +235,111 @@ For the first queue cleanup pass, stay conservative:
 
 Reference SQL:
 - `docs/reference/sql/authentik_maintenance.sql`
+
+---
+
+### Authentik: disaster recovery (full restore)
+
+When reindex and cleanup are not enough - the database is corrupted, lost, or the Authentik container stack is unrecoverable.
+
+**What you lose if Authentik is gone:**
+
+- ForwardAuth stops working (AdGuard, Portainer, Homepage, Stirling-PDF, IT-Tools, Excalidraw, Grafana)
+- OIDC stops working (Immich, Paperless-ngx)
+- Proxmox OIDC login fails (local root still works)
+
+**What still works without Authentik:**
+
+- Vaultwarden (local auth)
+- Jellyfin (local auth)
+- Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Mealie, Linkwarden (all local auth)
+- ntfy, Dozzle (local auth, no Authentik dependency)
+- Traefik (routing works, ForwardAuth middleware returns 401/502)
+- DNS (AdGuard still resolves, admin UI needs ForwardAuth bypass)
+
+**Step 1: Temporarily disable ForwardAuth**
+
+If you need access to ForwardAuth-protected services while Authentik is down:
+
+```bash
+ssh admin@10.0.0.10
+# Edit the Traefik dynamic config to comment out ForwardAuth middleware
+# or set auth_mode to "local" for affected services in group_vars/all.yml
+# then re-deploy Traefik:
+cd /path/to/repo
+ansible-playbook -i inventory.ini deploy_n100.yml --tags traefik
+```
+
+**Step 2: Restore the database**
+
+archwright archives contain both config files and database dumps. `archwright restore` handles config files (compose, env, certs) automatically. Database dumps need manual `pg_restore` because loading a dump into a live container is a provider-specific operation.
+
+```bash
+ssh admin@10.0.0.10
+
+# List available archives
+sudo /mnt/example_apps/appdata/docker/config/archwright/archwright list \
+    --config /mnt/example_apps/appdata/docker/config/archwright/authentik-db.yml
+
+# Preview what archwright restore would extract (config files only)
+sudo /mnt/example_apps/appdata/docker/config/archwright/archwright restore \
+    --config /mnt/example_apps/appdata/docker/config/archwright/authentik-db.yml \
+    --archive /mnt/example_apps/backup/archwright/authentik-db/<archive>.zip \
+    --dry-run
+
+# Stop Authentik but keep Postgres running
+cd /mnt/example_apps/appdata/docker/config/authentik
+sudo docker compose -f docker-compose.yml -f ldap-outpost.yml stop server worker authentik-ldap-outpost
+
+# Restore config files (compose, .env, certs)
+sudo /mnt/example_apps/appdata/docker/config/archwright/archwright restore \
+    --config /mnt/example_apps/appdata/docker/config/archwright/authentik-db.yml \
+    --archive /mnt/example_apps/backup/archwright/authentik-db/<archive>.zip \
+    --overwrite
+
+# Extract the database dump from the archive
+sudo unzip /mnt/example_apps/backup/archwright/authentik-db/<archive>.zip \
+    "databases/*" -d /tmp/authentik-restore/
+
+# Drop and recreate the database, then restore the dump
+sudo docker exec authentik-db psql -U authentik -d postgres -c "DROP DATABASE authentik;"
+sudo docker exec authentik-db psql -U authentik -d postgres -c "CREATE DATABASE authentik OWNER authentik;"
+sudo docker exec -i authentik-db pg_restore \
+    --username authentik --dbname authentik \
+    < /tmp/authentik-restore/databases/authentik_db/*.dump
+
+# Clean up extracted dump
+sudo rm -rf /tmp/authentik-restore
+
+# Bring everything back
+sudo docker compose -f docker-compose.yml -f ldap-outpost.yml up -d
+```
+
+**Step 3: If no backup exists**
+
+Fresh Authentik install with the existing Ansible role. You will need to:
+
+1. Re-run the Authentik setup wizard (create admin account)
+2. Recreate OIDC providers for Immich, Paperless, Proxmox
+3. Recreate ForwardAuth provider and application mappings
+4. Recreate any custom groups and user accounts
+
+This is painful but not catastrophic - the apps themselves keep their data. Only the SSO config is lost.
+
+**Step 4: Post-restore checks**
+
+```bash
+# Verify Authentik is healthy
+ssh admin@10.0.0.10 "sudo docker ps --format '{{.Names}} {{.Status}}' | grep authentik"
+
+# Check ForwardAuth is working
+curl -sI https://dns.homelab.local | head -5
+
+# Check OIDC (try logging into Immich/Paperless via SSO)
+# Check the Authentik Health dashboard in Grafana for queue stability
+```
+
+**Takeaway:** Authentik DB backup is the most important backup in this stack. Without it, you lose all identity config. archwright handles this automatically via the `authentik-db` job on the NAS (daily 02:50, 7 archives).
 
 ---
 

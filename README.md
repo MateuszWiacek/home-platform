@@ -5,9 +5,6 @@
 </p>
 
 [Architecture](ARCHITECTURE.md) | [Design Philosophy](DESIGN_PHILOSOPHY.md) | [Auth Model](docs/identity/AUTH_MODEL.md) | [Docs](docs/)
-
-[![Lint & Validate](https://github.com/MateuszWiacek/home-platform/actions/workflows/lint.yml/badge.svg)](https://github.com/MateuszWiacek/home-platform/actions/workflows/lint.yml)
-
 A working home platform, not a demo. Two nodes, one control plane: DNS, TLS, SSO, self-hosted apps, monitoring, and backups, all automated with Ansible. DNS, TLS, and SSO are designed as one stack, and if something breaks at 2am and I'm not around, my wife can follow the [recovery guide](docs/operations/NON_TECHNICAL_RECOVERY.md) and get the essentials back. That's the bar.
 
 ---
@@ -30,7 +27,7 @@ A working home platform, not a demo. Two nodes, one control plane: DNS, TLS, SSO
 
 ## Architecture Summary
 
-- **NAS / Intel N100 / TrueNAS SCALE**: AdGuard, Traefik, Authentik, Vaultwarden, Portainer, Jellyfin, Homepage
+- **NAS / Intel N100 / TrueNAS SCALE**: AdGuard, Traefik, Authentik, Vaultwarden, Portainer, Jellyfin, Homepage, ntfy
 - **Ryzen VM / Debian on Proxmox**: Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, monitoring
 - **Storage model**: databases and caches stay on Ryzen NVMe; photos, documents, and app data live on NAS storage via NFS
 - **Ingress model**: Traefik runs on the NAS and fronts both nodes; remote apps route through the file provider
@@ -45,9 +42,11 @@ A working home platform, not a demo. Two nodes, one control plane: DNS, TLS, SSO
 | [`DESIGN_PHILOSOPHY.md`](DESIGN_PHILOSOPHY.md) | Trade-offs, operating principles, and why the stack looks like this |
 | [`docs/identity/AUTH_MODEL.md`](docs/identity/AUTH_MODEL.md) | Per-service auth decisions, break-glass rules, rollout logic |
 | [`docs/operations/INCIDENT_RESPONSE.md`](docs/operations/INCIDENT_RESPONSE.md) | What to do when ingress, DNS, SSO, monitoring, or memory pressure goes sideways |
-| [`docs/reference/MONITORING_STACK.md`](docs/reference/MONITORING_STACK.md) | Prometheus, Alertmanager, Grafana, SMART monitoring, and alert coverage |
+| [`docs/reference/MONITORING_STACK.md`](docs/reference/MONITORING_STACK.md) | Prometheus, Loki, Alertmanager, Grafana, Dozzle, ntfy, and alert coverage |
 | [`docs/reference/BACKUP_STRATEGY.md`](docs/reference/BACKUP_STRATEGY.md) | Backup tiers, restore targets, off-site status, and current gaps |
 | [`docs/reference/DEPLOY_COMMANDS.md`](docs/reference/DEPLOY_COMMANDS.md) | Canonical deploy, dry-run, tag-based, and validation commands |
+| [`docs/reference/VERSION_CHECK.md`](docs/reference/VERSION_CHECK.md) | Automated version drift detection across all pinned images |
+| [`docs/setup/CLOUDFLARE_DNS01.md`](docs/setup/CLOUDFLARE_DNS01.md) | Cloudflare API token setup for DNS-01 TLS certificates |
 
 ---
 

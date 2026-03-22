@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+cd "{{ archwright_code_dir }}"
+exec {{ archwright_python }} -m backup "$@"

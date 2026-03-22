@@ -67,13 +67,13 @@ Not yet wired: Mealie, Linkwarden, Navidrome, Audiobookshelf, Calibre-Web, SiYua
 - Immich
 - Paperless-ngx
 
-### Wave 3 - Native OIDC for remaining candidates
+### Wave 3 - Native OIDC candidates
 
 - Mealie
 - Audiobookshelf
 - Linkwarden
 
-### Leave for later
+### Keep local for now
 
 - Navidrome - Subsonic clients complicate proxy auth
 - Calibre-Web - lower value than other OIDC targets

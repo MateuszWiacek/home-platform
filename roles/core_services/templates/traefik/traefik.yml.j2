@@ -38,8 +38,18 @@ entryPoints:
             sans:
               - "*.{{ domain_name }}"
 
+  metrics:
+    address: ":8082"
+
   ldaps:
     address: ":636"
+
+metrics:
+  prometheus:
+    entryPoint: metrics
+    addEntryPointsLabels: true
+    addRoutersLabels: true
+    addServicesLabels: true
 
 certificatesResolvers:
   myresolver:

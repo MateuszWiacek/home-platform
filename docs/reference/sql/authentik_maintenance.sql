@@ -49,6 +49,14 @@ WHERE state = 'queued'
 GROUP BY actor_name
 ORDER BY total DESC;
 
+-- 3b. Inspect channel-group fan-out.
+-- If one group is vastly larger than the rest, suspect stale memberships.
+SELECT group_key, COUNT(*) AS memberships
+FROM django_channels_postgres_groupchannel
+GROUP BY group_key
+ORDER BY memberships DESC
+LIMIT 10;
+
 -- 4. Batch delete expired channel rows
 WITH doomed AS (
   SELECT ctid
@@ -66,6 +74,15 @@ WHERE expires < NOW();
 -- 6. Vacuum after cleanup
 VACUUM (ANALYZE, PARALLEL 0) django_channels_postgres_message;
 VACUUM (ANALYZE, PARALLEL 0) django_postgres_cache_cacheentry;
+
+-- 6a. Optional: if the embedded outpost shared group is bloated, prune stale memberships.
+-- Keep the live channel row and remove only dead memberships from that single group.
+--
+-- DELETE FROM django_channels_postgres_groupchannel
+-- WHERE group_key = '<shared_group_key>'
+--   AND channel <> '<live_channel>';
+--
+-- VACUUM (ANALYZE, PARALLEL 0) django_channels_postgres_groupchannel;
 
 -- 7. Re-check queue state after cleanup
 SELECT state, COUNT(*)

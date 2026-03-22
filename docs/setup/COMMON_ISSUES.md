@@ -242,14 +242,16 @@ If cleanup is still too heavy, delete expired rows in batches first, then rerun 
 
 **Symptom:** Authentik stays up, but `authentik-worker` runs hot, task queue keeps growing, and logs show heavy scheduler churn or repeated cleanup retries.
 
-**Cause:** Two things tend to combine here:
+**Cause:** There are two common versions of this problem:
 
 - `django_channels_postgres_message` accumulates expired rows
-- `authentik_tasks_task` keeps a large historical backlog, often dominated by `proxy_on_logout` and `outpost_session_end`
+- `authentik_tasks_task` keeps a large historical backlog, often dominated by `proxy_on_logout`, `outpost_session_end`, and old event dispatch work
 
-Expired channel rows can block cleanup work long enough for the worker to spend most of its time on maintenance instead of draining the queue.
+There is also a nastier case: the embedded proxy outpost can keep stale rows in `django_channels_postgres_groupchannel`. When that happens, every logout or session-end fan-out sprays messages into dead channels and the queue never really catches up.
 
-**Fix:** Clean expired channel rows first, not the task table.
+Expired channel rows can block cleanup work long enough for the worker to spend most of its time on maintenance instead of draining the queue. Stale group memberships make that worse.
+
+**Fix:** Clean expired channel rows first, then check whether one channel group is obviously wrong before touching the task table.
 
 ```bash
 sudo docker exec authentik-db psql -U authentik -d authentik -c "
@@ -272,10 +274,20 @@ Then verify:
 sudo docker exec authentik-db psql -U authentik -d authentik -At -c "
 SELECT COUNT(*) FROM django_channels_postgres_message WHERE expires < NOW();
 SELECT state || E'\t' || COUNT(*) FROM authentik_tasks_task GROUP BY state ORDER BY COUNT(*) DESC;
+SELECT group_key || E'\t' || COUNT(*) FROM django_channels_postgres_groupchannel GROUP BY group_key ORDER BY COUNT(*) DESC LIMIT 5;
 "
 ```
 
-Do not start by deleting queued tasks blindly. Let the worker recover first, then decide whether old queued proxy/logout jobs still need manual cleanup.
+If one group has gone into the hundreds while the rest are tiny, suspect stale memberships in the embedded outpost shared group. Clean that up first. In practice that was the real fix here, not another blind queue purge.
+
+Use the SQL in `docs/reference/sql/authentik_maintenance.sql`:
+
+- inspect the largest group
+- compare it with the live outpost channel
+- delete stale rows from `django_channels_postgres_groupchannel`
+- `VACUUM (ANALYZE, PARALLEL 0)` the channel tables
+
+Only after that should you think about deleting old queued tasks, and even then keep it narrow.
 
 ---
 

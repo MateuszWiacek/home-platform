@@ -1,0 +1,24 @@
+# Authentik backup - PostgreSQL state plus deploy-time config files.
+
+backup_name: "authentik"
+target_base_dir: "{{ archwright_backup_dir }}/authentik-db"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  authentik:
+    compose:
+      source_dir: "{{ docker_config_dir }}/authentik"
+      include: "docker-compose.yml"
+    env:
+      source_dir: "{{ docker_config_dir }}/authentik"
+      include: ".env"
+    keys:
+      source_dir: "{{ docker_config_dir }}/authentik"
+      include: "*.pem"
+
+databases:
+  authentik_db:
+    provider: "docker_postgres"
+    container: "authentik-db"
+    dbname: "authentik"
+    user: "authentik"

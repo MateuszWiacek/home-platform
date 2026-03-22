@@ -30,7 +30,7 @@ Data that takes real effort to recreate but is not irreplaceable.
 | Paperless PostgreSQL | Ryzen NVMe | Document metadata, tags, correspondents. Rebuildable from raw files via re-OCR, but manual tagging is lost. |
 | Linkwarden PostgreSQL | Ryzen NVMe | Bookmark metadata, tags, and collections. Archived page content still lives outside the DB. |
 | Authentik PostgreSQL | NAS SSD pool | Users, groups, policies, provider configs. Rebuildable from scratch, but reconfiguring SSO across all services is a full day of work. |
-| Authentik media | NAS SSD pool | Custom branding, icons. Low effort to recreate, but annoying. |
+| Authentik assets | NAS SSD pool | Custom branding, icons, templates. Low effort to recreate, but annoying. |
 
 ### Tier 3 - Replaceable
 
@@ -50,19 +50,30 @@ Data that can be recreated from code, config, or re-setup with minimal effort.
 
 | Data | Method | Schedule | Retention | Destination |
 |---|---|---|---|---|
-| Immich PostgreSQL | `pg_dump` via `backup_dbs.sh` | Daily 03:00 | 28 days | NAS fast data pool |
-| Paperless PostgreSQL | `pg_dump` via `backup_dbs.sh` | Daily 03:00 | 28 days | NAS fast data pool |
-| Linkwarden PostgreSQL | `pg_dump` via `backup_dbs.sh` | Daily 03:00 | 28 days | NAS fast data pool |
-| Authentik PostgreSQL | `pg_dump` via SSH (optional) | Daily 03:00 | 28 days | NAS fast data pool |
+| Vaultwarden SQLite + files | archwright (SQLite `.backup` + file collection) | Daily 02:30 | 7 archives | NAS SSD pool |
+| Authentik assets | archwright (file collection) | Daily 02:40 | 7 archives | NAS SSD pool |
+| Authentik PostgreSQL | archwright (`docker_postgres`) | Daily 02:50 | 7 archives | NAS SSD pool |
+| Immich PostgreSQL | archwright (`docker_postgres`) | Daily 03:00 | 28 archives | NAS SSD backup dataset |
+| Paperless PostgreSQL | archwright (`docker_postgres`) | Daily 03:10 | 28 archives | NAS SSD backup dataset |
+| Linkwarden PostgreSQL | archwright (`docker_postgres`) | Daily 03:20 | 28 archives | NAS SSD backup dataset |
 | Photos library | ZFS snapshots (TrueNAS) | TrueNAS snapshot schedule | Per TrueNAS config | Same pool (local snapshots) |
 | Documents archive | ZFS snapshots (TrueNAS) | TrueNAS snapshot schedule | Per TrueNAS config | Same pool (local snapshots) |
 | App configs | ZFS snapshots (TrueNAS) | TrueNAS snapshot schedule | Per TrueNAS config | Same pool (local snapshots) |
 
 ### Backup tooling
 
-Current: bash script (`backup_dbs.sh`), cron-scheduled, with gzip compression.
+One backup tool, deployed on both nodes:
 
-Future: a Python backup module is in active development. The goal is to replace the bash script with something more robust - structured config, proper error handling, rotation logic, and testability. It started as a single-file utility but has grown into a proper module. It will be published as a separate repo once stable. Even with AI assistance, backup tooling is critical enough that it requires careful, deliberate work.
+**archwright** (Python, config-driven) - file collection + SQLite dumps + Docker PostgreSQL dumps:
+- Vaultwarden: SQLite `.backup` (hot, safe on live DB) + config files + attachments
+- Authentik assets: branding, icons, custom templates
+- Authentik PostgreSQL: local `docker exec pg_dump` on NAS
+- Immich, Paperless, Linkwarden PostgreSQL: local `docker exec pg_dump` on Ryzen
+- Runs on both nodes via per-job systemd timers
+- Manual CLI usage goes through the host-local wrapper in `archwright_config_dir`
+- NAS manual runs should use `sudo`; Ryzen manual runs should use `sudo -u backupuser` because the NFS backup mount is owned by that runtime user
+- Atomic ZIP archives with rotation (keep_last 7 on NAS, 28 on Ryzen)
+- Config files: `roles/archwright/templates/archwright/`
 
 ---
 
@@ -72,8 +83,6 @@ Being explicit about gaps is more useful than pretending they don't exist.
 
 | Data | Why not | Risk |
 |---|---|---|
-| Vaultwarden `/data` | Covered by cold storage + cloud, but no automated script | **Medium.** Off-site copies exist, but backup frequency depends on manual discipline. Automating this is a priority. |
-| Authentik media | Low priority | Low. Custom branding, easily recreated. |
 | SiYuan notes | No export automation | Medium if actively used. Consider periodic manual export. |
 | Mealie / Excalidraw / Linkwarden archive data | No backup script | Low to medium. Accept loss or add manual exports. |
 | Navidrome / Audiobookshelf / Calibre-Web DBs | Replaceable via library re-scan | Low. Media files are the source of truth, not the DB. |
@@ -93,7 +102,7 @@ The 3-2-1 rule: 3 copies, 2 different media types, 1 off-site.
 For tier 1 data, I recommend keeping copies in three physically separate places. A NAS with ZFS snapshots protects against accidental deletion and bit rot, but it does not protect against hardware failure, fire, or theft. An external drive (cold storage) in a different location covers the physical loss scenario. Cloud backup covers the "entire building is gone" scenario. All three together mean that losing tier 1 data requires three independent failures.
 
 **Tier 2 and 3 data:**
-- ✅ DB backups on NAS fast data pool (same box, different pool)
+- ✅ DB backups on NAS SSD backup dataset (same box, separate backup path)
 - ✅ ZFS snapshots protect against accidental deletion
 - ⚠️ No off-site copy for tier 2 data. Acceptable - these databases are rebuildable from raw files or repo.
 
@@ -108,8 +117,8 @@ Not an SLA - just honest expectations for how much data I can lose and how long 
 | Tier | RPO (how much data lost) | RTO (how long to recover) | Notes |
 |---|---|---|---|
 | Tier 1 - photos/docs | Up to 24h (ZFS snapshot interval) | Hours (ZFS rollback, cold storage, or cloud restore) | 3-2-1 covered: NAS + cold storage + cloud |
-| Tier 1 - Vaultwarden | Up to last cold storage / cloud sync | Hours (restore `/data` dir) | Automate backup frequency to reduce RPO |
-| Tier 2 - databases | Up to 24h (daily pg_dump) | 30-60 min per DB (restore + verify) | Straightforward pg_restore |
+| Tier 1 - Vaultwarden | Up to 24h (daily archwright backup) | Minutes (archwright restore) | Automated daily, plus cold storage + cloud |
+| Tier 2 - databases | Up to 24h (daily archwright backup) | 30-60 min per DB (restore + verify) | Straightforward `pg_restore` from `docker_postgres` dumps |
 | Tier 3 - app configs | Zero (in git) | Minutes to hours (ansible deploy) | Full redeploy from repo |
 | Tier 3 - replaceable DBs | Full loss acceptable | Varies (re-scan, re-index) | Media files are the source of truth |
 
@@ -117,27 +126,72 @@ Not an SLA - just honest expectations for how much data I can lose and how long 
 
 ## Restore procedures
 
-### PostgreSQL databases (Immich, Paperless, Linkwarden, Authentik)
+### PostgreSQL databases (Linkwarden tested)
+
+archwright archives contain config files and `pg_dump --format=custom` dumps. `archwright restore` handles the config files. The database dump needs manual `pg_restore` because loading into a live container is provider-specific.
+
+This example uses Linkwarden because that restore path has already been tested. Other `docker_postgres` jobs follow the same pattern, but they stay out of the tested list until they get their own drill.
 
 ```bash
-# Find the backup
-ls -lh /mnt/nas_fast_data/backups/db/ | tail -10
+# List available archives (example: Linkwarden on Ryzen)
+sudo -u backupuser /opt/backups/archwright/archwright list --config /opt/backups/archwright/linkwarden-db.yml
 
-# Restore (example: Immich)
-gunzip < /mnt/nas_fast_data/backups/db/immich_YYYY-MM-DD.sql.gz | docker exec -i immich_postgres psql -U immich -d immich
+# Preview what archwright would extract
+sudo -u backupuser /opt/backups/archwright/archwright restore \
+  --config /opt/backups/archwright/linkwarden-db.yml \
+  --archive /mnt/nas_backup/archwright/linkwarden-db/<archive>.zip \
+  --dry-run
+
+# Restore config files
+sudo -u backupuser /opt/backups/archwright/archwright restore \
+  --config /opt/backups/archwright/linkwarden-db.yml \
+  --archive /mnt/nas_backup/archwright/linkwarden-db/<archive>.zip \
+  --overwrite
+
+# Extract the dump from the archive
+sudo -u backupuser unzip /mnt/nas_backup/archwright/linkwarden-db/<archive>.zip \
+  "databases/*" -d /tmp/db-restore/
+
+# Restore into the container
+sudo docker exec -i linkwarden_db pg_restore \
+  --username linkwarden --dbname linkwarden --clean \
+  < /tmp/db-restore/databases/linkwarden_db/*.dump
+
+# Clean up
+rm -rf /tmp/db-restore
 ```
 
-### Vaultwarden
+For Authentik (runs on NAS, uses `sudo`), the same pattern applies - see [Authentik disaster recovery](../operations/INCIDENT_RESPONSE.md#authentik-disaster-recovery-full-restore) for the full procedure.
+
+### Vaultwarden (via archwright)
 
 ```bash
-# Stop the container
+# List available backups
+sudo /mnt/example_apps/appdata/docker/config/archwright/archwright list --config /mnt/example_apps/appdata/docker/config/archwright/vaultwarden.yml
+
+# Dry run - see what would be restored
+sudo /mnt/example_apps/appdata/docker/config/archwright/archwright restore \
+  --config /mnt/example_apps/appdata/docker/config/archwright/vaultwarden.yml \
+  --archive /mnt/example_apps/backup/archwright/vaultwarden/<archive>.zip \
+  --dry-run
+
+# Stop Vaultwarden, restore, start
 cd /mnt/example_apps/appdata/docker/config/vaultwarden
 sudo docker compose down
+sudo /mnt/example_apps/appdata/docker/config/archwright/archwright restore \
+  --config /mnt/example_apps/appdata/docker/config/archwright/vaultwarden.yml \
+  --archive /mnt/example_apps/backup/archwright/vaultwarden/<archive>.zip \
+  --overwrite
+sudo docker compose up -d
+```
 
-# Restore the /data directory from backup
+### Vaultwarden (manual, from cold storage)
+
+```bash
+# If archwright backups are unavailable, restore from cold storage / cloud
+cd /mnt/example_apps/appdata/docker/config/vaultwarden
+sudo docker compose down
 sudo cp -a /path/to/backup/vaultwarden/data /mnt/example_apps/appdata/docker/config/vaultwarden/data
-
-# Start the container
 sudo docker compose up -d
 ```
 
@@ -161,10 +215,9 @@ A backup that has never been tested is not a backup. It's a hope.
 
 | Test | Last tested | Result | Notes |
 |---|---|---|---|
-| Immich pg_dump restore | - | - | |
-| Paperless pg_dump restore | - | - | |
-| Linkwarden pg_dump restore | - | - | |
-| Vaultwarden `/data` restore | - | - | |
+| Vaultwarden archwright restore | 2026-03-22 | PASS | Restored on a fresh VM, test container started, HTTP `200`, SQLite schema non-empty |
+| Linkwarden PostgreSQL restore | 2026-03-22 | PASS | Restored on a fresh VM into a disposable PostgreSQL container, schema non-empty |
+| Authentik assets archwright restore | - | - | No restore drill yet; job may legitimately produce no archive when assets are empty |
 | ZFS snapshot file recovery | - | - | |
 
 > Fill this in after each restore test. Even testing once gives more confidence than never testing.
@@ -173,8 +226,8 @@ A backup that has never been tested is not a backup. It's a hope.
 
 ## Known gaps and TODOs
 
-- [ ] Automate Vaultwarden backup to match tier 1 protection level (currently manual)
+- [x] Automate Vaultwarden backup (archwright - SQLite + files, daily)
+- [x] Automate Authentik assets backup (archwright - file collection, daily)
+- [x] Move PostgreSQL backups into archwright (`docker_postgres`) on NAS and Ryzen
 - [ ] Schedule periodic restore tests (at least once per quarter)
-- [ ] Enable Authentik remote backup (requires SSH setup between nodes)
 - [ ] Evaluate whether SiYuan/Mealie/Linkwarden archive data needs backup automation based on actual usage
-- [ ] Publish Python backup module once stable

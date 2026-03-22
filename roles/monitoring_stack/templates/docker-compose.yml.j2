@@ -37,6 +37,23 @@ services:
         limits:
           memory: {{ alertmanager_memory_limit }}
 
+  loki:
+    container_name: loki
+    image: "grafana/loki:{{ loki_version }}"
+    command: -config.file=/etc/loki/loki-config.yml
+    user: "10001:10001"
+    volumes:
+      - {{ monitoring_stack_dir }}/config/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - {{ loki_data_dir }}:/loki
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "{{ ryzen_ip }}:{{ loki_service_port }}:3100"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ loki_memory_limit }}
+
   grafana:
     container_name: grafana
     image: "grafana/grafana-oss:{{ grafana_version }}"

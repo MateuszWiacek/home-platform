@@ -1,0 +1,21 @@
+# Paperless backup - PostgreSQL metadata plus stack config files.
+
+backup_name: "paperless"
+target_base_dir: "{{ archwright_backup_dir }}/paperless-db"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  paperless:
+    compose:
+      source_dir: "{{ paperless_stack_dir }}"
+      include: "docker-compose.yml"
+    env:
+      source_dir: "{{ paperless_stack_dir }}"
+      include: ".env"
+
+databases:
+  paperless_db:
+    provider: "docker_postgres"
+    container: "paperless_db"
+    dbname: "{{ vault_paperless_db_name | default('paperless') }}"
+    user: "{{ vault_paperless_db_user | default('paperless') }}"

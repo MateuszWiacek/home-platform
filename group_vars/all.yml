@@ -31,6 +31,8 @@ mealie_domain: "recipes.{{ domain_name }}"
 syncthing_domain: "sync.{{ domain_name }}"
 linkwarden_domain: "links.{{ domain_name }}"
 grafana_domain: "monitor.{{ domain_name }}"
+ntfy_domain: "ntfy.{{ domain_name }}"
+dozzle_domain: "logs.{{ domain_name }}"
 
 # === Cross-node app ports ===
 immich_service_port: 2283
@@ -49,12 +51,16 @@ linkwarden_service_port: 3001
 grafana_service_port: 3000
 prometheus_service_port: 9090
 alertmanager_service_port: 9093
+ntfy_service_port: 8086
+dozzle_service_port: 8887
+loki_service_port: 3100
 
 # === Optional books stack toggles ===
 audiobookshelf_enabled: true
 calibre_web_enabled: true
 syncthing_enabled: true
 monitoring_enabled: true
+dozzle_enabled: false
 
 # === Authentication mode per service ===
 # Valid values: local, forwardauth, oidc
@@ -79,6 +85,11 @@ mealie_auth_mode: "local"
 syncthing_auth_mode: "local"
 linkwarden_auth_mode: "local"
 grafana_auth_mode: "forwardauth"
+# Ntfy: keep local (push notifications must work even if Authentik is down)
+ntfy_auth_mode: "local"
+# Dozzle is opt-in in the public branch. It exposes a direct host port on the
+# Ryzen node, so enable it only on a trusted LAN.
+dozzle_auth_mode: "local"
 
 # === Homepage ===
 homepage_title: "My Homelab"

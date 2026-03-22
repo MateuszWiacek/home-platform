@@ -11,3 +11,12 @@
     that: _docker_check.rc == 0
     fail_msg: "Docker is not running or not accessible."
     quiet: true
+
+- name: "Validate | Authentik Postgres exporter secrets"
+  ansible.builtin.assert:
+    that:
+      - authentik_postgres_password is defined
+      - authentik_postgres_password | length > 0
+    fail_msg: "authentik_postgres_password is required when authentik_postgres_exporter_enabled is true."
+    quiet: true
+  when: authentik_postgres_exporter_enabled | default(false) | bool

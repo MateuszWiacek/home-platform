@@ -1,0 +1,30 @@
+services:
+  ntfy:
+    container_name: ntfy
+    image: "docker.io/binwiederhier/ntfy:{{ ntfy_version }}"
+    command: serve
+    user: "{{ app_uid }}:{{ app_gid }}"
+    restart: unless-stopped
+    volumes:
+      - {{ ntfy_stack_dir }}/server.yml:/etc/ntfy/server.yml:ro
+      - {{ ntfy_data_dir }}:/var/lib/ntfy
+      - {{ ntfy_cache_dir }}:/var/cache/ntfy
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "{{ nas_ip }}:{{ ntfy_service_port }}:8080"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ntfy.rule=Host(`{{ ntfy_domain }}`)"
+      - "traefik.http.routers.ntfy.entrypoints=websecure"
+      - "traefik.http.routers.ntfy.tls.certresolver=myresolver"
+      - "traefik.http.services.ntfy.loadbalancer.server.port=8080"
+    networks:
+      - proxy_net
+    deploy:
+      resources:
+        limits:
+          memory: {{ ntfy_memory_limit }}
+
+networks:
+  proxy_net:
+    external: true
