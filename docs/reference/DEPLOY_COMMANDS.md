@@ -38,6 +38,7 @@ ansible-playbook -i inventory.ini deploy_n100.yml --tags authentik
 ansible-playbook -i inventory.ini deploy_n100.yml --tags vaultwarden
 ansible-playbook -i inventory.ini deploy_n100.yml --tags portainer
 ansible-playbook -i inventory.ini deploy_n100.yml --tags media
+ansible-playbook -i inventory.ini deploy_n100.yml --tags archwright
 
 # Entire core role
 ansible-playbook -i inventory.ini deploy_n100.yml --tags core
@@ -50,7 +51,7 @@ ansible-playbook -i inventory.ini deploy_n100.yml --tags core
 ```bash
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags immich
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags paperless
-ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags backups
+ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags archwright
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags utility_tools
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags navidrome
 ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags books_stack

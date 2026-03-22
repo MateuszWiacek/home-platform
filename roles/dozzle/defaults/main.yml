@@ -1,0 +1,9 @@
+---
+dozzle_enabled: false
+dozzle_version: "v10.1.2"
+dozzle_stack_dir: "{{ app_stacks_root | default('/opt') }}/dozzle"
+dozzle_service_port: 8887
+dozzle_memory_limit: "128M"
+# NAS Dozzle agent connection (deployed via monitoring_exporters role)
+dozzle_nas_agent_host: "{{ nas_ip }}"
+dozzle_nas_agent_port: 7007

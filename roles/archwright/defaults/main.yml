@@ -1,0 +1,24 @@
+---
+# archwright backup tool
+# https://github.com/MateuszWiacek/archwright
+
+archwright_python: "/usr/bin/python3"
+archwright_command: "{{ archwright_python }} -m backup"
+archwright_source_mode: "archive"
+archwright_source_archive_url: "https://github.com/MateuszWiacek/archwright/archive/refs/heads/main.tar.gz"
+archwright_source_archive_checksum: ""
+archwright_local_source_dir: "{{ lookup('env', 'HOME') }}/src/archwright"
+archwright_source_archive_path: "/tmp/archwright-src.tar.gz"
+archwright_config_dir: "/opt/archwright"
+archwright_cli_path: "{{ archwright_config_dir }}/archwright"
+archwright_code_dir: "{{ archwright_config_dir }}/app"
+archwright_backup_dir: "/srv/backups/archwright"
+archwright_keep_last: 7
+archwright_run_user: "root"
+archwright_run_group: "root"
+
+# Host-specific jobs should override this list in group_vars.
+archwright_jobs: []
+
+# Legacy job names to remove after config/template renames.
+archwright_removed_jobs: []

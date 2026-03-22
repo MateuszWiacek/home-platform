@@ -1,0 +1,27 @@
+# Vaultwarden backup - SQLite database + config files + attachments.
+#
+# Closes the tier 1 gap: Vaultwarden /data was previously backed up
+# only via cold storage and cloud sync (manual).  This automates it.
+#
+# The SQLite provider uses `sqlite3 .backup` which is safe on a live
+# database - no container stop needed for the DB dump.  Attachments
+# are collected as files.  The container is stopped briefly during
+# file collection to guarantee consistency of the full /data directory.
+
+backup_name: "vaultwarden"
+target_base_dir: "{{ archwright_backup_dir }}/vaultwarden"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  vaultwarden:
+    appdata:
+      source_dir: "{{ docker_config_dir }}/vaultwarden"
+      include: "*"
+      exclude: "db.sqlite3*"
+      pre_command: "docker stop vaultwarden"
+      post_command: "docker start vaultwarden"
+
+databases:
+  vaultwarden_db:
+    provider: "sqlite"
+    db_path: "{{ docker_config_dir }}/vaultwarden/db.sqlite3"

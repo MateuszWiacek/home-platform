@@ -9,6 +9,7 @@ portainer_agent_version: "2.33.7"
 # === NFS Source Paths (what TrueNAS exports) ===
 nas_source_config: "/mnt/example_apps/appdata/docker/config"
 nas_source_data: "/mnt/example_apps/appdata/docker/data"
+nas_source_backup: "/mnt/example_apps/backup"
 nas_source_photos: "/mnt/example_storage/photos/library"
 nas_source_docs: "/mnt/example_storage/documents"
 nas_source_media: "/mnt/example_storage/media"
@@ -16,6 +17,7 @@ nas_source_media: "/mnt/example_storage/media"
 # === Mount Points (Logical Paths on Ryzen VM) ===
 mnt_fast_config: "/mnt/nas_fast_config"
 mnt_fast_data: "/mnt/nas_fast_data"
+mnt_backup: "/mnt/nas_backup"
 mnt_photos: "/mnt/nas_photos"
 mnt_docs: "/mnt/nas_documents"
 mnt_media: "/mnt/nas_media"
@@ -44,6 +46,9 @@ cadvisor_version: "v0.51.0"
 prometheus_version: "v3.3.1"
 grafana_version: "11.6.0"
 alertmanager_version: "v0.28.1"
+loki_version: "3.5.0"
+dozzle_version: "v10.1.2"
+promtail_version: "3.5.0"
 
 # Internal dependencies (override only if required)
 # WARNING: pgvecto-rs is deprecated for Immich v2.x+.
@@ -53,3 +58,32 @@ immich_postgres_image: "tensorchord/pgvecto-rs:pg14-v0.2.0"
 immich_redis_image: "redis:6.2-alpine"
 paperless_postgres_image: "docker.io/library/postgres:16-alpine"
 paperless_redis_image: "docker.io/library/redis:7-alpine"
+
+# === Archwright (Ryzen-side Docker PostgreSQL backups) ===
+archwright_config_dir: "/opt/backups/archwright"
+archwright_backup_dir: "{{ mnt_backup }}/archwright"
+archwright_keep_last: 28
+archwright_run_user: "backupuser"
+archwright_run_group: "backupuser"
+archwright_jobs:
+  - name: "immich-db"
+    description: "Immich PostgreSQL backup"
+    enabled: true
+    config_template: "archwright/immich-db.yml.j2"
+    config_path: "{{ archwright_config_dir }}/immich-db.yml"
+    backup_path: "{{ archwright_backup_dir }}/immich-db"
+    on_calendar: "*-*-* 03:00:00"
+  - name: "paperless-db"
+    description: "Paperless PostgreSQL backup"
+    enabled: true
+    config_template: "archwright/paperless-db.yml.j2"
+    config_path: "{{ archwright_config_dir }}/paperless-db.yml"
+    backup_path: "{{ archwright_backup_dir }}/paperless-db"
+    on_calendar: "*-*-* 03:10:00"
+  - name: "linkwarden-db"
+    description: "Linkwarden PostgreSQL backup"
+    enabled: true
+    config_template: "archwright/linkwarden-db.yml.j2"
+    config_path: "{{ archwright_config_dir }}/linkwarden-db.yml"
+    backup_path: "{{ archwright_backup_dir }}/linkwarden-db"
+    on_calendar: "*-*-* 03:20:00"

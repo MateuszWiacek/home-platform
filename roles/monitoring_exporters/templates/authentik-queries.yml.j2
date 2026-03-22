@@ -1,0 +1,82 @@
+authentik_task_queue:
+  query: |
+    SELECT
+      actor_name,
+      COUNT(*)::double precision AS queued
+    FROM authentik_tasks_task
+    WHERE state = 'queued'
+    GROUP BY actor_name
+  metrics:
+    - actor_name:
+        usage: "LABEL"
+        description: "Authentik task actor name"
+    - queued:
+        usage: "GAUGE"
+        description: "Queued Authentik tasks by actor"
+
+authentik_channel_messages:
+  query: |
+    SELECT
+      COUNT(*)::double precision AS total_messages,
+      COALESCE(SUM(CASE WHEN expires < NOW() THEN 1 ELSE 0 END), 0)::double precision AS expired_messages
+    FROM django_channels_postgres_message
+  metrics:
+    - total_messages:
+        usage: "GAUGE"
+        description: "Total Authentik channel messages"
+    - expired_messages:
+        usage: "GAUGE"
+        description: "Expired Authentik channel messages"
+
+authentik_channel_groups:
+  query: |
+    WITH grouped AS (
+      SELECT
+        group_key,
+        COUNT(*)::double precision AS group_memberships
+      FROM django_channels_postgres_groupchannel
+      GROUP BY group_key
+    )
+    SELECT
+      COALESCE((SELECT COUNT(*)::double precision FROM django_channels_postgres_groupchannel), 0)::double precision AS total_group_memberships,
+      COALESCE((SELECT SUM(CASE WHEN expires < NOW() THEN 1 ELSE 0 END)::double precision FROM django_channels_postgres_groupchannel), 0)::double precision AS expired_group_memberships,
+      COALESCE(MAX(group_memberships), 0)::double precision AS max_group_memberships
+    FROM grouped
+  metrics:
+    - total_group_memberships:
+        usage: "GAUGE"
+        description: "Total Authentik channel group memberships"
+    - expired_group_memberships:
+        usage: "GAUGE"
+        description: "Expired Authentik channel group memberships"
+    - max_group_memberships:
+        usage: "GAUGE"
+        description: "Size of the largest Authentik channel group"
+
+authentik_session_store:
+  query: |
+    SELECT
+      (SELECT COUNT(*)::double precision FROM authentik_core_authenticatedsession) AS authenticated_sessions,
+      (SELECT COUNT(*)::double precision FROM django_session) AS django_sessions
+  metrics:
+    - authenticated_sessions:
+        usage: "GAUGE"
+        description: "Live Authentik authenticated sessions"
+    - django_sessions:
+        usage: "GAUGE"
+        description: "Live Django sessions in Authentik"
+
+authentik_logout_queue_age:
+  query: |
+    SELECT
+      COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(mtime))), 0)::double precision AS oldest_logout_queue_seconds
+    FROM authentik_tasks_task
+    WHERE state = 'queued'
+      AND actor_name IN (
+        'authentik.outposts.tasks.outpost_session_end',
+        'authentik.providers.proxy.tasks.proxy_on_logout'
+      )
+  metrics:
+    - oldest_logout_queue_seconds:
+        usage: "GAUGE"
+        description: "Age in seconds of the oldest queued logout-related Authentik task"

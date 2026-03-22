@@ -1,5 +1,6 @@
 {% set nas_host = groups['n100'][0] %}
 {% set nas_smartctl_enabled = hostvars[nas_host].smartctl_exporter_enabled | default(false) | bool %}
+{% set nas_authentik_postgres_exporter_enabled = hostvars[nas_host].authentik_postgres_exporter_enabled | default(false) | bool %}
 global:
   scrape_interval: 30s
   evaluation_interval: 30s
@@ -37,6 +38,13 @@ scrape_configs:
         labels:
           instance: "ryzen"
 
+  - job_name: "traefik"
+    static_configs:
+      - targets:
+          - "{{ nas_ip }}:8082"
+        labels:
+          instance: "nas"
+
   - job_name: "prometheus"
     static_configs:
       - targets:
@@ -47,6 +55,15 @@ scrape_configs:
     static_configs:
       - targets:
           - "{{ nas_ip }}:{{ hostvars[nas_host].smartctl_exporter_port | default(9633) }}"
+        labels:
+          instance: "nas"
+{% endif %}
+
+{% if nas_authentik_postgres_exporter_enabled %}
+  - job_name: "authentik_postgres"
+    static_configs:
+      - targets:
+          - "{{ nas_ip }}:{{ hostvars[nas_host].authentik_postgres_exporter_port | default(9187) }}"
         labels:
           instance: "nas"
 {% endif %}

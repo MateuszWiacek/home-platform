@@ -47,6 +47,8 @@ For setup instructions, see [`FORWARDAUTH_SETUP.md`](FORWARDAUTH_SETUP.md), [`OI
 | SiYuan | Ryzen | Local | Current access-code model is simple and predictable |
 | Mealie | Ryzen | Native OIDC | Good candidate for central user login |
 | Linkwarden | Ryzen | Native OIDC | Strong fit for central sign-in |
+| Dozzle | Ryzen | Local | Optional internal debugging tool; keep it on a trusted LAN |
+| ntfy | NAS | Local | Alert delivery must work when Authentik is down |
 | Syncthing | Ryzen | Local | GUI is secondary; sync protocol is the real service |
 
 ---
@@ -76,6 +78,9 @@ siyuan_auth_mode: local
 mealie_auth_mode: local
 syncthing_auth_mode: local
 linkwarden_auth_mode: local
+ntfy_auth_mode: local
+dozzle_auth_mode: local
+dozzle_enabled: false
 ```
 
 Default for all services is `local`. Services move to `forwardauth` or `oidc` deliberately, never by accident.
@@ -107,9 +112,9 @@ Break-glass principles:
 
 ---
 
-## Open questions
+## Resolved questions
 
-- Should Mealie go straight to OIDC, or use temporary ForwardAuth first?
-- Should Audiobookshelf stay local until mobile/client flows are tested?
-- Is Navidrome worth central auth if Subsonic clients are part of the design?
-- Should Calibre-Web remain local to keep the setup simpler?
+- **Mealie**: will go straight to OIDC when ready. ForwardAuth adds no value here since Mealie has native OIDC support. Currently local - no rush.
+- **Audiobookshelf**: stays local until mobile app OIDC flows are verified working. The Android/iOS clients need testing before flipping the switch.
+- **Navidrome**: stays local. Subsonic clients (DSub, play:Sub) do not support OIDC or ForwardAuth. Central auth would break the primary use case.
+- **Calibre-Web**: stays local. Low value target for central auth, simple setup, rarely accessed by others.

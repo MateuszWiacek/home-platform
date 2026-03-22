@@ -63,3 +63,23 @@ The pattern for adding a new service to this repo:
 6. Add DNS entry in AdGuard Home (or rely on the `*.homelab.local` wildcard rewrite)
 7. Add the endpoint to the smoke test
 8. Deploy with `--check --diff` first, then apply
+
+---
+
+## Backup automation conventions
+
+Backup orchestration in this repo follows these rules:
+
+- application and database backups should be owned by `archwright`
+- recurring execution should be handled by host-native schedulers such as `systemd` timers
+- avoid keeping parallel ad-hoc backup scripts once the same workflow is covered by `archwright`
+
+Restore validation should be treated as a separate concern from production deployment:
+
+- prove backup usefulness with disposable restore drills before claiming a workflow is complete
+- keep temporary restore-test inventory, playbooks, and environment-specific helpers out of `main` unless they are intended as maintained project documentation
+
+Operationally, watch for two common restore issues:
+
+- limited local disk space on disposable test hosts, especially when extracting archives or initializing temporary database volumes
+- permission differences between local filesystems and mounted backup targets, particularly when archives are readable to an application user but not to `root`

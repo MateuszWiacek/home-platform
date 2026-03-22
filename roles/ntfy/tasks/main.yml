@@ -1,0 +1,41 @@
+---
+- name: "Ntfy | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "Ntfy | Ensure stack directories exist"
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0755'
+  loop:
+    - "{{ ntfy_stack_dir }}"
+    - "{{ ntfy_data_dir }}"
+    - "{{ ntfy_cache_dir }}"
+
+- name: "Ntfy | Deploy server config"
+  ansible.builtin.template:
+    src: "ntfy/server.yml.j2"
+    dest: "{{ ntfy_stack_dir }}/server.yml"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0644'
+  notify: Restart ntfy
+
+- name: "Ntfy | Deploy docker-compose"
+  ansible.builtin.template:
+    src: "ntfy/docker-compose.yml.j2"
+    dest: "{{ ntfy_stack_dir }}/docker-compose.yml"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0644'
+  notify: Restart ntfy
+
+- name: "Ntfy | Start containers"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --remove-orphans"
+    chdir: "{{ ntfy_stack_dir }}"
+  changed_when: false
+  when: not ansible_check_mode

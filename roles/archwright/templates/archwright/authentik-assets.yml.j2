@@ -1,0 +1,17 @@
+# Authentik assets backup - branding, icons, custom templates.
+#
+# This is tier 2 / low priority data. Easy to recreate manually,
+# but annoying to lose. No service stop needed - these are static files.
+
+backup_name: "authentik_assets"
+target_base_dir: "{{ archwright_backup_dir }}/authentik-assets"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  authentik:
+    media:
+      source_dir: "{{ docker_config_dir }}/authentik/media"
+      include: "*"
+    custom_templates:
+      source_dir: "{{ docker_config_dir }}/authentik/custom-templates"
+      include: "*"

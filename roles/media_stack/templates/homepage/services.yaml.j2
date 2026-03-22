@@ -133,6 +133,13 @@
         href: "https://{{ grafana_domain }}"
         description: "Metrics & Alerts Dashboard"
 {% endif %}
+{% if monitoring_enabled | default(false) | bool and dozzle_enabled | default(false) | bool %}
+
+    - Dozzle:
+        icon: dozzle.png
+        href: "https://{{ dozzle_domain }}"
+        description: "Real-time Container Logs"
+{% endif %}
 
 - Utility Tools:
     - Stirling-PDF:
@@ -144,3 +151,8 @@
         icon: it-tools.png
         href: "https://{{ it_tools_domain }}"
         description: "Developer & Admin Utilities"
+
+    - Ntfy:
+        icon: ntfy.png
+        href: "https://{{ ntfy_domain }}"
+        description: "Push Notifications"

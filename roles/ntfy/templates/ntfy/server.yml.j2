@@ -1,0 +1,15 @@
+# ntfy server configuration
+# Managed by Ansible - do not edit manually
+
+base-url: "https://{{ ntfy_domain }}"
+listen-http: ":8080"
+
+# Cache and attachment storage
+cache-file: "/var/cache/ntfy/cache.db"
+attachment-cache-dir: "/var/cache/ntfy/attachments"
+
+# Auth: open access for home use (all devices on LAN can publish/subscribe)
+auth-default-access: "read-write"
+
+# Log level
+log-level: "warn"

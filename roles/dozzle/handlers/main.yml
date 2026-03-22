@@ -1,0 +1,6 @@
+---
+- name: Restart dozzle
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --force-recreate --remove-orphans"
+    chdir: "{{ dozzle_stack_dir }}"
+  when: not ansible_check_mode

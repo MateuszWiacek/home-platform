@@ -18,7 +18,7 @@ rules:
     indent-sequences: whatever
 
 ignore:
-  # Jinja2 templates are not valid YAML — skip them entirely
+  # Jinja2 templates are not valid YAML - skip them entirely
   - "roles/*/templates/**"
   # Encrypted vault file
   - "secrets.yml"

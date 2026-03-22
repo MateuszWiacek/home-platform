@@ -105,10 +105,12 @@ Everything behind Traefik, HTTPS via Cloudflare DNS-01. No inbound router exposu
 | Linkwarden | `https://links.homelab.local` | Ryzen VM |
 | Syncthing | `https://sync.homelab.local` *(optional)* | Ryzen VM |
 | Grafana | `https://monitor.homelab.local` *(optional)* | Ryzen VM |
+| Dozzle | `https://logs.homelab.local` *(optional)* | Ryzen VM |
+| ntfy | `https://ntfy.homelab.local` | NAS |
 | TrueNAS UI | `https://nas.homelab.local` | NAS |
 | Proxmox | `https://pve.homelab.local` | NAS -> Proxmox |
 
-Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, Grafana, and the utility tools run on the Ryzen VM but route through NAS Traefik via file provider. Docker socket provider only sees local containers. Syncthing is optional because its sync directory must exist on the NAS first. Monitoring is optional because metrics are useful, but they are not part of the minimum viable homestack.
+Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, Grafana, and the utility tools run on the Ryzen VM but route through NAS Traefik via file provider. Docker socket provider only sees local containers. ntfy runs on NAS and stays available even when Ryzen is down - alert delivery cannot depend on the compute node. Dozzle is optional in the public branch because it exposes a direct host port on the Ryzen node. Syncthing is optional because its sync directory must exist on the NAS first. Monitoring is optional because metrics are useful, but they are not part of the minimum viable homestack.
 
 ---
 
@@ -147,10 +149,11 @@ Two nodes, split by responsibility and power profile:
 │  Traefik    AdGuard Home        │     │  Immich       Paperless-ngx      │
 │  Authentik  Vaultwarden         │<----│  Navidrome    Audiobookshelf     │
 │  Jellyfin   Homepage            │ NFS │  Calibre-Web  SiYuan             │
-│  Portainer                      │     │  Excalidraw   Mealie             │
+│  Portainer  ntfy                │     │  Excalidraw   Mealie             │
 │                                 │     │  Linkwarden   Optional Syncthing │
 │                                 │     │  Grafana      Prometheus         │
-│                                 │     │  Alertmanager cAdvisor           │
+│                                 │     │  Alertmanager Loki               │
+│                                 │     │  Dozzle       cAdvisor           │
 │                                 │     │  Node Exporter                   │
 │                                 │     │  Heavy CPU/RAM workloads         │
 │                                 │     │  Local NVMe for DB/cache data    │
@@ -166,9 +169,9 @@ Two nodes, split by responsibility and power profile:
 roles/
 ├── core_services/   # Traefik, AdGuard Home, Authentik, Vaultwarden, Portainer
 ├── media_stack/     # Jellyfin, Homepage
-├── prod_apps/       # Immich, Paperless-ngx, DB backups
-├── monitoring_exporters/ # Node Exporter, cAdvisor
-├── monitoring_stack/ # Prometheus, Alertmanager, Grafana
+├── prod_apps/       # Immich, Paperless-ngx
+├── monitoring_exporters/ # Node Exporter, cAdvisor, Promtail, Dozzle agent
+├── monitoring_stack/ # Prometheus, Alertmanager, Grafana, Loki
 ├── navidrome/       # Navidrome music streaming
 ├── utility_tools/   # Stirling-PDF, IT-Tools
 ├── books_stack/     # Audiobookshelf, Calibre-Web
@@ -177,6 +180,9 @@ roles/
 ├── mealie/          # Mealie recipe manager
 ├── syncthing/       # Syncthing file synchronization
 ├── linkwarden/      # Linkwarden bookmark archive
+├── ntfy/            # ntfy push notification server
+├── dozzle/          # Dozzle real-time log viewer
+├── archwright/      # archwright backup tool (files, SQLite, Docker PostgreSQL)
 ├── common/          # APT baseline, qemu-guest-agent
 ├── ssh_hardening/   # Shared SSH policy, both nodes
 └── docker_host/     # Docker engine, Portainer Agent

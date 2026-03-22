@@ -16,6 +16,27 @@
     mode: '0644'
   notify: Restart monitoring exporters
 
+- name: "Monitoring Exporters | Ensure Promtail config directory exists"
+  ansible.builtin.file:
+    path: "{{ exporters_stack_dir }}/promtail"
+    state: directory
+    mode: '0755'
+
+- name: "Monitoring Exporters | Deploy Promtail config"
+  ansible.builtin.template:
+    src: "promtail/promtail.yml.j2"
+    dest: "{{ exporters_stack_dir }}/promtail/promtail.yml"
+    mode: '0644'
+  notify: Restart monitoring exporters
+
+- name: "Monitoring Exporters | Deploy Authentik Postgres exporter queries"
+  ansible.builtin.template:
+    src: "authentik-queries.yml.j2"
+    dest: "{{ exporters_stack_dir }}/authentik-queries.yml"
+    mode: '0644'
+  when: authentik_postgres_exporter_enabled | default(false) | bool
+  notify: Restart monitoring exporters
+
 - name: "Monitoring Exporters | Start containers"
   ansible.builtin.shell:
     cmd: "docker compose up -d --remove-orphans"

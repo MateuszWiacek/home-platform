@@ -50,6 +50,50 @@ node_exporter_version: "v1.9.0"
 cadvisor_version: "v0.51.0"
 smartctl_exporter_enabled: true
 smartctl_exporter_version: "v0.14.0"
+authentik_postgres_exporter_enabled: true
+authentik_postgres_exporter_version: "v0.15.0"
+
+# === Ntfy ===
+ntfy_version: "v2.11.0"
+ntfy_stack_dir: "{{ docker_config_dir }}/ntfy"
+ntfy_data_dir: "{{ docker_data_dir }}/ntfy/data"
+ntfy_cache_dir: "{{ docker_data_dir }}/ntfy/cache"
+
+# === Dozzle agent (NAS side) ===
+dozzle_agent_enabled: "{{ dozzle_enabled | default(false) | bool }}"
+dozzle_agent_version: "v10.1.2"
+
+# === Promtail (log shipper to Loki) ===
+promtail_version: "3.5.0"
+
+# === Archwright (NAS-local backups) ===
+archwright_config_dir: "{{ docker_config_dir }}/archwright"
+archwright_backup_dir: "/mnt/example_apps/backup/archwright"
+archwright_keep_last: 7
+archwright_removed_jobs:
+  - "authentik-media"
+archwright_jobs:
+  - name: "vaultwarden"
+    description: "Vaultwarden backup"
+    enabled: true
+    config_template: "archwright/vaultwarden.yml.j2"
+    config_path: "{{ archwright_config_dir }}/vaultwarden.yml"
+    backup_path: "{{ archwright_backup_dir }}/vaultwarden"
+    on_calendar: "*-*-* 02:30:00"
+  - name: "authentik-assets"
+    description: "Authentik assets backup"
+    enabled: true
+    config_template: "archwright/authentik-assets.yml.j2"
+    config_path: "{{ archwright_config_dir }}/authentik-assets.yml"
+    backup_path: "{{ archwright_backup_dir }}/authentik-assets"
+    on_calendar: "*-*-* 02:40:00"
+  - name: "authentik-db"
+    description: "Authentik PostgreSQL backup"
+    enabled: true
+    config_template: "archwright/authentik-db.yml.j2"
+    config_path: "{{ archwright_config_dir }}/authentik-db.yml"
+    backup_path: "{{ archwright_backup_dir }}/authentik-db"
+    on_calendar: "*-*-* 02:50:00"
 
 # === AdGuard compatibility ===
 # Keep setup mode disabled by default. Enable only for first-run wizard, then disable again.

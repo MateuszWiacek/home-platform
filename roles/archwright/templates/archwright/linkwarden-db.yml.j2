@@ -1,0 +1,21 @@
+# Linkwarden backup - PostgreSQL metadata plus stack config files.
+
+backup_name: "linkwarden"
+target_base_dir: "{{ archwright_backup_dir }}/linkwarden-db"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  linkwarden:
+    compose:
+      source_dir: "{{ linkwarden_stack_dir }}"
+      include: "docker-compose.yml"
+    env:
+      source_dir: "{{ linkwarden_stack_dir }}"
+      include: ".env"
+
+databases:
+  linkwarden_db:
+    provider: "docker_postgres"
+    container: "linkwarden_db"
+    dbname: "{{ vault_linkwarden_db_name | default('linkwarden') }}"
+    user: "{{ vault_linkwarden_db_user | default('linkwarden') }}"

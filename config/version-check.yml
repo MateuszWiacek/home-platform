@@ -1,0 +1,198 @@
+---
+# ============================================================
+# VERSION DRIFT CHECKER - Service Registry
+#
+# Maps each pinned service version to its upstream GitHub repo.
+# Used by scripts/version-check.py to detect available updates.
+#
+# Service fields:
+#   github:       GitHub owner/repo for release lookups
+#   variable:     Ansible variable name in group_vars/*
+#   extract:      Regex to extract comparable version (optional)
+#                 Applied to both current and upstream tags.
+#   coupled_with: List of services that MUST share the same version
+#   note:         Shown in output when update is available
+#   host:         Where the service runs (nas / ryzen / both)
+#
+# Ntfy fields:
+#   url:          Ntfy server URL
+#   topic:        Topic to publish to
+#   token:        (optional) Access token for ntfy auth
+#   user:         (optional) Basic auth username
+#   password:     (optional) Basic auth password
+#   Note: NTFY_TOKEN env var overrides the token field.
+# ============================================================
+
+ntfy:
+  url: "https://ntfy.homelab.local"
+  topic: "homelab-updates"
+  # token: "tk_..."       # uncomment when ntfy auth is enabled
+
+group_vars:
+  - group_vars/all.yml
+  - group_vars/n100.yml
+  - group_vars/docker_nodes.yml
+
+services:
+
+  # ── Core Infrastructure (NAS) ─────────────────────────────
+
+  traefik:
+    github: traefik/traefik
+    variable: traefik_version
+    host: nas
+
+  authentik:
+    github: goauthentik/authentik
+    variable: authentik_version
+    host: nas
+    note: "CalVer - check migration guide before upgrading"
+
+  adguard:
+    github: AdguardTeam/AdGuardHome
+    variable: adguard_version
+    host: nas
+
+  vaultwarden:
+    github: dani-garcia/vaultwarden
+    variable: vaultwarden_version
+    host: nas
+
+  portainer:
+    github: portainer/portainer
+    variable: portainer_version
+    host: nas
+
+  # ── Media (NAS + Ryzen) ───────────────────────────────────
+
+  jellyfin:
+    github: jellyfin/jellyfin
+    variable: jellyfin_version
+    extract: '([\d.]+)'
+    host: nas
+    note: "LinuxServer image - extract upstream version from compound tag"
+
+  homepage:
+    github: gethomepage/homepage
+    variable: homepage_version
+    host: nas
+
+  # ── Productivity (Ryzen) ──────────────────────────────────
+
+  immich:
+    github: immich-app/immich
+    variable: immich_version
+    host: ryzen
+    note: "Server + ML share this tag - check breaking changes"
+
+  paperless:
+    github: paperless-ngx/paperless-ngx
+    variable: paperless_version
+    host: ryzen
+
+  stirling_pdf:
+    github: Stirling-Tools/Stirling-PDF
+    variable: stirling_pdf_version
+    host: ryzen
+
+  navidrome:
+    github: navidrome/navidrome
+    variable: navidrome_version
+    host: ryzen
+
+  audiobookshelf:
+    github: advplyr/audiobookshelf
+    variable: audiobookshelf_version
+    host: ryzen
+
+  calibre_web:
+    github: janeczku/calibre-web
+    variable: calibre_web_version
+    extract: '([\d.]+)'
+    host: ryzen
+    note: "LinuxServer image - extract upstream version from compound tag"
+
+  siyuan:
+    github: siyuan-note/siyuan
+    variable: siyuan_version
+    host: ryzen
+
+  mealie:
+    github: mealie-recipes/mealie
+    variable: mealie_version
+    host: ryzen
+
+  syncthing:
+    github: syncthing/syncthing
+    variable: syncthing_version
+    extract: '([\d.]+)'
+    host: ryzen
+    note: "LinuxServer image - extract upstream version from compound tag"
+
+  linkwarden:
+    github: linkwarden/linkwarden
+    variable: linkwarden_version
+    host: ryzen
+
+  # ── Monitoring (Ryzen) ────────────────────────────────────
+
+  prometheus:
+    github: prometheus/prometheus
+    variable: prometheus_version
+    host: ryzen
+
+  alertmanager:
+    github: prometheus/alertmanager
+    variable: alertmanager_version
+    host: ryzen
+
+  grafana:
+    github: grafana/grafana
+    variable: grafana_version
+    host: ryzen
+
+  loki:
+    github: grafana/loki
+    variable: loki_version
+    host: ryzen
+    coupled_with: [promtail]
+
+  promtail:
+    github: grafana/loki
+    variable: promtail_version
+    host: both
+    coupled_with: [loki]
+
+  node_exporter:
+    github: prometheus/node_exporter
+    variable: node_exporter_version
+    host: both
+
+  cadvisor:
+    github: google/cadvisor
+    variable: cadvisor_version
+    host: both
+
+  smartctl_exporter:
+    github: prometheus-community/smartctl_exporter
+    variable: smartctl_exporter_version
+    host: nas
+
+  # ── Notifications & Logs ──────────────────────────────────
+
+  ntfy:
+    github: binwiederhier/ntfy
+    variable: ntfy_version
+    host: nas
+
+  dozzle:
+    github: amir20/dozzle
+    variable: dozzle_version
+    host: ryzen
+    coupled_with: [dozzle_agent]
+
+  dozzle_agent:
+    github: amir20/dozzle
+    variable: dozzle_agent_version
+    host: nas
+    coupled_with: [dozzle]

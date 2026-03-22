@@ -1,0 +1,18 @@
+[Unit]
+Description=Archwright {{ item.description }}
+Documentation=https://github.com/MateuszWiacek/archwright
+After=network-online.target docker.service
+Wants=network-online.target docker.service
+ConditionPathExists={{ item.config_path }}
+
+[Service]
+Type=oneshot
+User={{ archwright_run_user }}
+Group={{ archwright_run_group }}
+ExecStart={{ archwright_cli_path }} backup --config {{ item.config_path }}
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+
+[Install]
+WantedBy=multi-user.target

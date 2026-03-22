@@ -1,0 +1,315 @@
+---
+- name: "Archwright | Validate source mode"
+  ansible.builtin.assert:
+    that:
+      - archwright_source_mode in ['archive', 'local']
+    fail_msg: >-
+      archwright_source_mode must be either 'archive' or 'local'.
+
+- name: "Archwright | Verify local source tree exists on control node"
+  ansible.builtin.stat:
+    path: "{{ archwright_local_source_dir }}/backup/__main__.py"
+  delegate_to: localhost
+  become: false
+  register: _archwright_local_source
+  when: archwright_source_mode == 'local'
+
+- name: "Archwright | Assert local source tree is available"
+  ansible.builtin.assert:
+    that:
+      - _archwright_local_source.stat.exists
+    fail_msg: >-
+      archwright source tree was not found at {{ archwright_local_source_dir }}.
+      Override archwright_local_source_dir if the repository lives elsewhere on the control node.
+  when: archwright_source_mode == 'local'
+
+- name: "Archwright | Assert archive URL is configured"
+  ansible.builtin.assert:
+    that:
+      - archwright_source_archive_url | length > 0
+    fail_msg: >-
+      archwright_source_archive_url must be set when archwright_source_mode is 'archive'.
+  when: archwright_source_mode == 'archive'
+
+- name: "Archwright | Create config directory"
+  ansible.builtin.file:
+    path: "{{ archwright_config_dir }}"
+    state: directory
+    owner: "{{ archwright_run_user }}"
+    group: "{{ archwright_run_group }}"
+    mode: '0755'
+
+- name: "Archwright | Create local backup root"
+  ansible.builtin.file:
+    path: "{{ archwright_backup_dir }}"
+    state: directory
+    owner: "{{ archwright_run_user }}"
+    group: "{{ archwright_run_group }}"
+    mode: '0750'
+  when: archwright_run_user == 'root'
+
+- name: "Archwright | Create local backup root as runtime user"
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - "{{ archwright_run_user }}"
+      - --
+      - install
+      - -d
+      - -m
+      - "0750"
+      - "{{ archwright_backup_dir }}"
+  when: archwright_run_user != 'root'
+
+- name: "Archwright | Ensure CLI wrapper directory exists"
+  ansible.builtin.file:
+    path: "{{ archwright_cli_path | dirname }}"
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "Archwright | Remove previously deployed source tree"
+  ansible.builtin.file:
+    path: "{{ archwright_code_dir }}"
+    state: absent
+
+- name: "Archwright | Create code directory"
+  ansible.builtin.file:
+    path: "{{ archwright_code_dir }}"
+    state: directory
+    owner: "{{ archwright_run_user }}"
+    group: "{{ archwright_run_group }}"
+    mode: '0755'
+
+- name: "Archwright | Deploy source package from local tree"
+  ansible.builtin.copy:
+    src: "{{ archwright_local_source_dir }}/backup"
+    dest: "{{ archwright_code_dir }}/"
+    owner: "{{ archwright_run_user }}"
+    group: "{{ archwright_run_group }}"
+    mode: preserve
+  when: archwright_source_mode == 'local'
+
+- name: "Archwright | Download source archive"
+  ansible.builtin.get_url:
+    url: "{{ archwright_source_archive_url }}"
+    dest: "{{ archwright_source_archive_path }}"
+    mode: '0644'
+    checksum: "{{ archwright_source_archive_checksum if archwright_source_archive_checksum | length > 0 else omit }}"
+  when: archwright_source_mode == 'archive'
+
+- name: "Archwright | Deploy source package from archive"
+  ansible.builtin.unarchive:
+    src: "{{ archwright_source_archive_path }}"
+    dest: "{{ archwright_code_dir }}"
+    remote_src: true
+    owner: "{{ archwright_run_user }}"
+    group: "{{ archwright_run_group }}"
+    extra_opts:
+      - --strip-components=1
+  when: archwright_source_mode == 'archive'
+
+- name: "Archwright | Verify deployed package exists"
+  ansible.builtin.stat:
+    path: "{{ archwright_code_dir }}/backup/__main__.py"
+  register: _archwright_deployed_source
+
+- name: "Archwright | Assert deployed package is valid"
+  ansible.builtin.assert:
+    that:
+      - _archwright_deployed_source.stat.exists
+    fail_msg: >-
+      archwright was deployed, but backup/__main__.py was not found in {{ archwright_code_dir }}.
+
+- name: "Archwright | Deploy CLI wrapper"
+  ansible.builtin.template:
+    src: "archwright/cli.sh.j2"
+    dest: "{{ archwright_cli_path }}"
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "Archwright | Ensure run user has Docker socket access"
+  ansible.builtin.user:
+    name: "{{ archwright_run_user }}"
+    groups: docker
+    append: true
+  when:
+    - archwright_run_user != 'root'
+    - archwright_jobs | selectattr('enabled', 'equalto', true) | list | length > 0
+
+- name: "Archwright | Remove legacy cron job"
+  ansible.builtin.cron:
+    name: "Archwright daily backups"
+    state: absent
+
+- name: "Archwright | Remove legacy backup runner script"
+  ansible.builtin.file:
+    path: "{{ archwright_config_dir }}/run-backups.sh"
+    state: absent
+
+- name: "Archwright | Stop removed legacy timers"
+  ansible.builtin.systemd:
+    name: "archwright-{{ item }}.timer"
+    state: stopped
+    enabled: false
+  loop: "{{ archwright_removed_jobs }}"
+  failed_when: false
+
+- name: "Archwright | Stop removed legacy services"
+  ansible.builtin.systemd:
+    name: "archwright-{{ item }}.service"
+    state: stopped
+  loop: "{{ archwright_removed_jobs }}"
+  failed_when: false
+
+- name: "Archwright | Remove legacy configs for renamed jobs"
+  ansible.builtin.file:
+    path: "{{ archwright_config_dir }}/{{ item }}.yml"
+    state: absent
+  loop: "{{ archwright_removed_jobs }}"
+
+- name: "Archwright | Remove legacy timer units for renamed jobs"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/archwright-{{ item }}.timer"
+    state: absent
+  loop: "{{ archwright_removed_jobs }}"
+
+- name: "Archwright | Remove legacy service units for renamed jobs"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/archwright-{{ item }}.service"
+    state: absent
+  loop: "{{ archwright_removed_jobs }}"
+
+- name: "Archwright | Deploy enabled backup configs"
+  ansible.builtin.template:
+    src: "{{ item.config_template }}"
+    dest: "{{ item.config_path }}"
+    owner: "{{ archwright_run_user }}"
+    group: "{{ archwright_run_group }}"
+    mode: '0640'
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.enabled | bool
+
+- name: "Archwright | Remove disabled backup configs"
+  ansible.builtin.file:
+    path: "{{ item.config_path }}"
+    state: absent
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not (item.enabled | bool)
+
+- name: "Archwright | Create enabled backup output directories"
+  ansible.builtin.file:
+    path: "{{ item.backup_path }}"
+    state: directory
+    owner: "{{ archwright_run_user }}"
+    group: "{{ archwright_run_group }}"
+    mode: '0750'
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - item.enabled | bool
+    - archwright_run_user == 'root'
+
+- name: "Archwright | Create enabled backup output directories as runtime user"
+  ansible.builtin.command:
+    argv:
+      - runuser
+      - -u
+      - "{{ archwright_run_user }}"
+      - --
+      - install
+      - -d
+      - -m
+      - "0750"
+      - "{{ item.backup_path }}"
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when:
+    - item.enabled | bool
+    - archwright_run_user != 'root'
+
+- name: "Archwright | Stop disabled timers"
+  ansible.builtin.systemd:
+    name: "archwright-{{ item.name }}.timer"
+    state: stopped
+    enabled: false
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not (item.enabled | bool)
+  failed_when: false
+
+- name: "Archwright | Stop disabled services"
+  ansible.builtin.systemd:
+    name: "archwright-{{ item.name }}.service"
+    state: stopped
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not (item.enabled | bool)
+  failed_when: false
+
+- name: "Archwright | Deploy systemd services for enabled jobs"
+  ansible.builtin.template:
+    src: "archwright/backup.service.j2"
+    dest: "/etc/systemd/system/archwright-{{ item.name }}.service"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.enabled | bool
+
+- name: "Archwright | Deploy systemd timers for enabled jobs"
+  ansible.builtin.template:
+    src: "archwright/backup.timer.j2"
+    dest: "/etc/systemd/system/archwright-{{ item.name }}.timer"
+    owner: root
+    group: root
+    mode: '0644'
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.enabled | bool
+
+- name: "Archwright | Remove timer units for disabled jobs"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/archwright-{{ item.name }}.timer"
+    state: absent
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not (item.enabled | bool)
+
+- name: "Archwright | Remove service units for disabled jobs"
+  ansible.builtin.file:
+    path: "/etc/systemd/system/archwright-{{ item.name }}.service"
+    state: absent
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: not (item.enabled | bool)
+
+- name: "Archwright | Reload systemd units"
+  ansible.builtin.systemd:
+    daemon_reload: true
+
+- name: "Archwright | Enable and start timers for enabled jobs"
+  ansible.builtin.systemd:
+    name: "archwright-{{ item.name }}.timer"
+    enabled: true
+    state: restarted
+  loop: "{{ archwright_jobs }}"
+  loop_control:
+    label: "{{ item.name }}"
+  when: item.enabled | bool

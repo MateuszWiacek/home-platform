@@ -2,6 +2,7 @@
 {% set nas_apps_mountpoint = hostvars[nas_host].docker_root_dir %}
 {% set nas_media_mountpoint = hostvars[nas_host].media_root_dir %}
 {% set nas_smartctl_enabled = hostvars[nas_host].smartctl_exporter_enabled | default(false) | bool %}
+{% set nas_authentik_postgres_exporter_enabled = hostvars[nas_host].authentik_postgres_exporter_enabled | default(false) | bool %}
 groups:
   - name: host_health
     rules:
@@ -161,4 +162,44 @@ groups:
         annotations:
           summary: "Disk error counters increased on {% raw %}{{ $labels.device }}{% endraw %}"
           description: "SMART media or error log counters increased for {% raw %}{{ $labels.device }}{% endraw %} during the last 24 hours."
+{% endif %}
+
+{% if nas_authentik_postgres_exporter_enabled %}
+  - name: authentik_health
+    rules:
+      - alert: AuthentikPostgresExporterDown
+        expr: up{job="authentik_postgres", instance="nas"} == 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Authentik Postgres exporter is down"
+          description: "Prometheus cannot scrape the Authentik Postgres exporter on the NAS."
+
+      - alert: AuthentikTaskQueueHigh
+        expr: sum(authentik_task_queue_queued{job="authentik_postgres", instance="nas"}) > 50000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Authentik task queue is high"
+          description: "Queued Authentik tasks on the NAS are above 50k."
+
+      - alert: AuthentikExpiredChannelMessagesHigh
+        expr: authentik_channel_messages_expired_messages{job="authentik_postgres", instance="nas"} > 10000
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Authentik expired channel messages are high"
+          description: "Expired channel messages in Authentik are above 10k."
+
+      - alert: AuthentikLargestChannelGroupHigh
+        expr: authentik_channel_groups_max_group_memberships{job="authentik_postgres", instance="nas"} > 50
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Authentik largest channel group is too large"
+          description: "The largest Authentik channel group has more than 50 memberships."
 {% endif %}

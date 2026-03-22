@@ -13,7 +13,9 @@
     - "{{ prometheus_data_dir }}"
     - "{{ grafana_data_dir }}"
     - "{{ alertmanager_data_dir }}"
+    - "{{ loki_data_dir }}"
     - "{{ monitoring_stack_dir }}/config"
+    - "{{ monitoring_stack_dir }}/config/loki"
     - "{{ grafana_dashboards_dir }}"
     - "{{ monitoring_stack_dir }}/config/grafana/provisioning/datasources"
     - "{{ monitoring_stack_dir }}/config/grafana/provisioning/dashboards"
@@ -34,6 +36,11 @@
   ansible.builtin.stat:
     path: "{{ alertmanager_data_dir }}"
   register: _alertmanager_data_dir
+
+- name: "Monitoring Stack | Check Loki data directory state"
+  ansible.builtin.stat:
+    path: "{{ loki_data_dir }}"
+  register: _loki_data_dir
 
 - name: "Monitoring Stack | Fix Grafana data directory ownership"
   ansible.builtin.file:
@@ -58,6 +65,14 @@
     group: "65534"
     mode: '0755'
   when: not ansible_check_mode or _alertmanager_data_dir.stat.exists
+
+- name: "Monitoring Stack | Fix Loki data directory ownership"
+  ansible.builtin.file:
+    path: "{{ loki_data_dir }}"
+    owner: "10001"
+    group: "10001"
+    mode: '0755'
+  when: not ansible_check_mode
 
 - name: "Monitoring Stack | Deploy docker-compose"
   ansible.builtin.template:
@@ -87,6 +102,13 @@
     mode: '0644'
   notify: Restart monitoring stack
 
+- name: "Monitoring Stack | Deploy Loki config"
+  ansible.builtin.template:
+    src: "loki/loki-config.yml.j2"
+    dest: "{{ monitoring_stack_dir }}/config/loki/loki-config.yml"
+    mode: '0644'
+  notify: Restart monitoring stack
+
 - name: "Monitoring Stack | Deploy Grafana datasource provisioning"
   ansible.builtin.template:
     src: "grafana/provisioning/datasources/datasources.yml.j2"
@@ -111,6 +133,14 @@
       dest: "homelab-overview.json"
     - src: "containers-overview.json"
       dest: "containers-overview.json"
+    - src: "logs-overview.json"
+      dest: "logs-overview.json"
+    - src: "logs-explorer.json"
+      dest: "logs-explorer.json"
+    - src: "traefik.json"
+      dest: "traefik.json"
+    - src: "container-status.json"
+      dest: "container-status.json"
   notify: Restart monitoring stack
 
 - name: "Monitoring Stack | Deploy templated Grafana dashboards"
@@ -121,6 +151,8 @@
   loop:
     - src: "nas-critical-signals.json.j2"
       dest: "nas-critical-signals.json"
+    - src: "authentik-health.json.j2"
+      dest: "authentik-health.json"
   notify: Restart monitoring stack
 
 - name: "Monitoring Stack | Start containers"

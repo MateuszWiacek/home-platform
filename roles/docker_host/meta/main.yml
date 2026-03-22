@@ -1,6 +1,6 @@
 ---
 # Role metadata
-# Target: Debian/Ubuntu hosts only — NOT TrueNAS SCALE
+# Target: Debian/Ubuntu hosts only - NOT TrueNAS SCALE
 
 galaxy_info:
   author: homelab

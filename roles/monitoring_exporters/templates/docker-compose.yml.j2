@@ -60,3 +60,65 @@ services:
         limits:
           memory: {{ smartctl_exporter_memory_limit }}
 {% endif %}
+
+{% if authentik_postgres_exporter_enabled | default(false) | bool %}
+  authentik-postgres-exporter:
+    container_name: authentik_postgres_exporter
+    image: "quay.io/prometheuscommunity/postgres-exporter:{{ authentik_postgres_exporter_version }}"
+    environment:
+      DATA_SOURCE_URI: "authentik-db:5432/authentik?sslmode=disable"
+      DATA_SOURCE_USER: "authentik"
+      DATA_SOURCE_PASS: "{{ authentik_postgres_password }}"
+      PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/authentik-queries.yml"
+    volumes:
+      - {{ exporters_stack_dir }}/authentik-queries.yml:/etc/postgres_exporter/authentik-queries.yml:ro
+    networks:
+      - proxy_net
+    ports:
+      - "{{ authentik_postgres_exporter_port }}:9187"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ authentik_postgres_exporter_memory_limit }}
+{% endif %}
+
+  promtail:
+    container_name: promtail
+    image: "grafana/promtail:{{ promtail_version }}"
+    command: -config.file=/etc/promtail/promtail.yml
+    volumes:
+      - {{ exporters_stack_dir }}/promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      - {{ exporters_stack_dir }}/promtail:/var/lib/promtail
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "127.0.0.1:{{ promtail_port }}:{{ promtail_port }}"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ promtail_memory_limit }}
+
+{% if dozzle_agent_enabled | default(false) | bool %}
+  dozzle-agent:
+    container_name: dozzle_agent
+    image: "ghcr.io/amir20/dozzle:{{ dozzle_agent_version }}"
+    command: agent
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    ports:
+      - "{{ nas_ip }}:{{ dozzle_agent_port }}:7007"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: {{ dozzle_agent_memory_limit }}
+{% endif %}
+
+{% if authentik_postgres_exporter_enabled | default(false) | bool %}
+networks:
+  proxy_net:
+    external: true
+{% endif %}

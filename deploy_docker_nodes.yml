@@ -33,6 +33,13 @@
       when: syncthing_enabled | default(false)
     - role: linkwarden
       tags: ['linkwarden']
+    - role: archwright
+      tags: ['backups', 'archwright']
+    - role: dozzle
+      tags: ['dozzle']
+      when:
+        - monitoring_enabled | default(false) | bool
+        - dozzle_enabled | default(false) | bool
     - role: monitoring_exporters
       tags: ['monitoring', 'exporters']
       when: monitoring_enabled | default(false) | bool

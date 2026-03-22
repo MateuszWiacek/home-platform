@@ -12,11 +12,14 @@ Variable map, secrets reference, backup coverage, and infrastructure config.
 | Ryzen VM | 10.0.0.30 | Debian (Proxmox VM) | Docker host + apps, tools, books, notes, and collaboration services | `docker_nodes` |
 | Proxmox | 10.0.0.20 | Proxmox VE | Hypervisor (hosts Ryzen VM) | *(unmanaged by Ansible)* |
 
-Common paths on NAS:
+Common paths and mounts:
 - NAS SSH: `admin@10.0.0.10`
 - Ryzen SSH: `admin@10.0.0.30`
 - `docker_config_dir`: `/mnt/example_apps/appdata/docker/config`
 - `docker_data_dir`: `/mnt/example_apps/appdata/docker/data`
+- `archwright_backup_dir`: `/mnt/example_apps/backup/archwright`
+- `nas_source_backup`: `/mnt/example_apps/backup`
+- `mnt_backup`: `/mnt/nas_backup`
 - Domain: `homelab.local`
 
 ---
@@ -39,8 +42,11 @@ Common paths on NAS:
 Full backup strategy, tiers, restore procedures, and recovery targets: [`BACKUP_STRATEGY.md`](BACKUP_STRATEGY.md).
 
 Backup-related variables:
-- `db_backup_retention_days` in `roles/prod_apps/defaults/main.yml`
-- `enable_authentik_remote_backup`, `nas_backup_ssh_user`, `nas_backup_ssh_key_path` in `roles/prod_apps/defaults/main.yml` (override in inventory only if needed)
+- `archwright_config_dir`, `archwright_cli_path`, `archwright_backup_dir`, `archwright_keep_last` in `roles/archwright/defaults/main.yml` (override in `group_vars/n100.yml` and `group_vars/docker_nodes.yml` per host)
+- `archwright_source_mode`, `archwright_source_archive_url`, `archwright_local_source_dir` in `roles/archwright/defaults/main.yml` control whether archwright is pulled from its public repo or copied from a local checkout
+- `archwright_jobs` defined per host in `group_vars/n100.yml` and `group_vars/docker_nodes.yml` (defaults to empty list in `roles/archwright/defaults/main.yml`)
+- `archwright_run_user`, `archwright_run_group` in `group_vars/docker_nodes.yml` for NFS-safe writes into the backup dataset
+- `nas_source_backup`, `mnt_backup` in `group_vars/docker_nodes.yml` for the Ryzen-side NFS mount into the NAS backup dataset
 
 ---
 
@@ -50,8 +56,9 @@ Monitoring is controlled by `monitoring_enabled` in `group_vars/all.yml`. It is 
 
 Feature toggle and shared endpoints:
 - `monitoring_enabled` in `group_vars/all.yml`
+- `dozzle_enabled` in `group_vars/all.yml`
 - `grafana_domain`, `grafana_service_port`, `prometheus_service_port`, `alertmanager_service_port` in `group_vars/all.yml`
-- `grafana_auth_mode` in `group_vars/all.yml`
+- `grafana_auth_mode`, `dozzle_auth_mode` in `group_vars/all.yml`
 
 Image tags:
 - `node_exporter_version`, `cadvisor_version` in `group_vars/n100.yml`

@@ -1,0 +1,17 @@
+services:
+  dozzle:
+    container_name: dozzle
+    image: "ghcr.io/amir20/dozzle:{{ dozzle_version }}"
+    restart: unless-stopped
+    environment:
+      DOZZLE_REMOTE_AGENT: "{{ dozzle_nas_agent_host }}:{{ dozzle_nas_agent_port }}"
+      DOZZLE_NO_ANALYTICS: "true"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "{{ ryzen_ip }}:{{ dozzle_service_port }}:8080"
+    deploy:
+      resources:
+        limits:
+          memory: {{ dozzle_memory_limit }}

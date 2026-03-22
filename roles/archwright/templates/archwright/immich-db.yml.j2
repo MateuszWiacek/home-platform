@@ -1,0 +1,21 @@
+# Immich backup - PostgreSQL metadata plus stack config files.
+
+backup_name: "immich"
+target_base_dir: "{{ archwright_backup_dir }}/immich-db"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  immich:
+    compose:
+      source_dir: "{{ immich_stack_dir }}"
+      include: "docker-compose.yml"
+    env:
+      source_dir: "{{ immich_stack_dir }}"
+      include: ".env"
+
+databases:
+  immich_db:
+    provider: "docker_postgres"
+    container: "immich_postgres"
+    dbname: "{{ vault_immich_db_name | default('immich') }}"
+    user: "{{ vault_immich_db_user | default('immich') }}"

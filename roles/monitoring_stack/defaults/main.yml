@@ -3,13 +3,16 @@ monitoring_stack_dir: "{{ app_stacks_root | default('/opt') }}/monitoring"
 prometheus_data_dir: "{{ monitoring_stack_dir }}/prometheus-data"
 grafana_data_dir: "{{ monitoring_stack_dir }}/grafana-data"
 alertmanager_data_dir: "{{ monitoring_stack_dir }}/alertmanager-data"
+loki_data_dir: "{{ monitoring_stack_dir }}/loki-data"
 grafana_dashboards_dir: "{{ monitoring_stack_dir }}/config/grafana/dashboards"
 prometheus_version: "v3.3.1"
 grafana_version: "11.6.0"
 alertmanager_version: "v0.28.1"
+loki_version: "3.5.0"
 prometheus_memory_limit: "512M"
 grafana_memory_limit: "256M"
 alertmanager_memory_limit: "64M"
+loki_memory_limit: "512M"
 prometheus_retention_time: "30d"
 prometheus_retention_size: "5GB"
 nas_apps_pool_warning_percent: 85
@@ -18,3 +21,5 @@ nas_media_pool_warning_percent: 85
 nas_media_pool_critical_percent: 95
 smartctl_temperature_warning_celsius: 50
 smartctl_temperature_critical_celsius: 55
+loki_retention_period: "168h"
+loki_service_port: 3100
