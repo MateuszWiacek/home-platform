@@ -5,11 +5,13 @@ services:
     restart: unless-stopped
     ports:
       # Web UI
-      - "{{ syncthing_service_port }}:8384"
+      - "{{ syncthing_bind_host }}:{{ syncthing_service_port }}:8384"
       # Sync protocol (TCP + UDP)
-      - "{{ syncthing_sync_port }}:22000/tcp"
-      - "{{ syncthing_sync_port }}:22000/udp"
-      # Local discovery
+      - "{{ syncthing_bind_host }}:{{ syncthing_sync_port }}:22000/tcp"
+      - "{{ syncthing_bind_host }}:{{ syncthing_sync_port }}:22000/udp"
+      # Local discovery: stays on 0.0.0.0 on purpose. Discovery uses UDP
+      # broadcast, and a socket bound to a unicast address does not receive
+      # broadcast datagrams, so a bind_host prefix here would break it.
       - "{{ syncthing_discovery_port }}:21027/udp"
     environment:
       - PUID={{ app_uid }}

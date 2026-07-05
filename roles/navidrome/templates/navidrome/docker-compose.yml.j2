@@ -6,7 +6,7 @@ services:
     restart: unless-stopped
     user: "{{ app_uid }}:{{ app_gid }}"
     ports:
-      - "{{ navidrome_service_port }}:4533"
+      - "{{ navidrome_bind_host }}:{{ navidrome_service_port }}:4533"
     environment:
       ND_SCANSCHEDULE: "1h"
       ND_LOGLEVEL: "info"

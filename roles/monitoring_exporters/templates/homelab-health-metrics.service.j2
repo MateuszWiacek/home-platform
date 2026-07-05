@@ -1,0 +1,7 @@
+[Unit]
+Description=Homelab health metrics textfile collector
+After=docker.service
+
+[Service]
+Type=oneshot
+ExecStart={{ homelab_health_metrics_script }}

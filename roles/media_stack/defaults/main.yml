@@ -3,9 +3,14 @@
 media_stack_root: "{{ docker_config_dir }}"
 
 homepage_enabled: true
-homepage_version: "latest"
+homepage_version: "v1.10.1"
 homepage_stack_dir: "{{ media_stack_root }}/homepage"
 
 jellyfin_enabled: true
-jellyfin_version: "latest"
+jellyfin_version: "10.11.6ubu2404-ls20"
 jellyfin_stack_dir: "{{ media_stack_root }}/jellyfin"
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+jellyfin_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

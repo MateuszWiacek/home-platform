@@ -12,6 +12,11 @@ structure:
     env:
       source_dir: "{{ linkwarden_stack_dir }}"
       include: ".env"
+    archive_data:
+      source_dir: "{{ linkwarden_data_dir }}"
+      include: "*"
+      pre_command: "docker stop linkwarden"
+      post_command: "docker start linkwarden"
 
 databases:
   linkwarden_db:

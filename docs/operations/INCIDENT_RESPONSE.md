@@ -77,7 +77,7 @@ ssh admin@10.0.0.10 "sudo docker logs --tail 200 adguard"
 
 ```bash
 ssh admin@10.0.0.10 "sudo docker logs --tail 400 traefik | grep -iE 'acme|challenge|cert|error'"
-dig TXT _acme-challenge.<your-real-domain> @1.1.1.1  # DNS-01 needs a real registered domain
+dig TXT _acme-challenge.homelab.local @1.1.1.1  # real domain used for ACME DNS-01
 ssh admin@10.0.0.10 "cd /mnt/example_apps/appdata/docker/config/traefik && sudo docker compose up -d --remove-orphans"
 ```
 
@@ -110,6 +110,153 @@ If Grafana is the only thing failing externally, verify Traefik routing on the N
 
 ```bash
 ssh admin@10.0.0.10 "sudo docker logs --tail 200 traefik | grep -i grafana"
+```
+
+---
+
+### Long offline / wake-up recovery
+
+Use this when the lab was powered off for weeks and comes back half-alive: containers are running, but DNS, Authentik, or backups are noisy.
+
+Typical signals:
+
+- AdGuard container is up, but `dig @10.0.0.10` times out
+- `auth.homelab.local` returns `500`
+- `authentik-db` logs `FATAL: sorry, too many clients already`
+- Archwright units failed right after boot because NFS, Docker, or app containers were not ready yet
+
+Start with the normal smoke test, but expect it to fail on the first broken dependency:
+
+```bash
+ansible-playbook -i inventory.ini smoke_test.yml
+```
+
+#### 1. Fix AdGuard if DNS is up-but-dead
+
+If AdGuard is running but DNS queries time out, the Docker bridge may be stale after wake-up. Recreate only the AdGuard stack. This keeps the config and data volumes intact.
+
+```bash
+ssh admin@10.0.0.10
+cd /mnt/example_apps/appdata/docker/config/adguard
+sudo docker compose down
+sudo docker compose up -d
+
+dig +short auth.homelab.local @127.0.0.1
+dig +short auth.homelab.local @10.0.0.10
+```
+
+If the NAS itself cannot resolve external names during bootstrap, temporarily add a public resolver to `/etc/resolv.conf`, then restore local DNS once AdGuard is healthy:
+
+```bash
+sudo tee /etc/resolv.conf >/dev/null <<'EOF'
+domain local
+nameserver 10.0.0.10
+nameserver 1.1.1.1
+nameserver 8.8.8.8
+EOF
+```
+
+#### 2. Calm down Authentik before deleting anything
+
+If Authentik returns `500` and Postgres says `too many clients already`, stop the worker first. The worker can keep retrying old session/logout jobs and starve the DB.
+
+```bash
+ssh admin@10.0.0.10
+sudo docker stop authentik-worker
+
+sudo docker exec authentik-db psql -U authentik -d authentik -At -F $'\t' -c "
+SELECT state, COUNT(*)
+FROM authentik_tasks_task
+GROUP BY state
+ORDER BY COUNT(*) DESC;
+
+SELECT actor_name, state, COUNT(*), MIN(mtime), MAX(mtime)
+FROM authentik_tasks_task
+WHERE state IN ('queued', 'running', 'consumed', 'rejected')
+GROUP BY actor_name, state
+ORDER BY COUNT(*) DESC
+LIMIT 30;
+"
+```
+
+If `psql` still gets `too many clients already`, stop the server too. Keep Postgres running.
+
+```bash
+sudo docker stop authentik-server
+sudo docker exec authentik-db psql -U authentik -d authentik -At -c "SELECT COUNT(*) FROM pg_stat_activity;"
+```
+
+Take a fresh DB backup before cleanup if Postgres accepts connections:
+
+```bash
+sudo systemctl start archwright-authentik-db.service
+sudo systemctl status archwright-authentik-db.service --no-pager
+```
+
+If the backlog is clearly stale session/logout noise, delete task logs first, then tasks. The FK from `authentik_tasks_tasklog` will block direct task deletes.
+
+```bash
+sudo docker exec authentik-db psql -v ON_ERROR_STOP=1 -U authentik -d authentik -c "
+WITH target AS (
+  SELECT message_id
+  FROM authentik_tasks_task
+  WHERE (state IN ('done', 'rejected') AND mtime < NOW() - INTERVAL '7 days')
+     OR (
+       actor_name IN (
+         'authentik.providers.proxy.tasks.proxy_on_logout',
+         'authentik.outposts.tasks.outpost_session_end'
+       )
+       AND state IN ('queued', 'running', 'consumed')
+     )
+)
+DELETE FROM authentik_tasks_tasklog
+WHERE task_id IN (SELECT message_id FROM target);
+
+WITH target AS (
+  SELECT message_id
+  FROM authentik_tasks_task
+  WHERE (state IN ('done', 'rejected') AND mtime < NOW() - INTERVAL '7 days')
+     OR (
+       actor_name IN (
+         'authentik.providers.proxy.tasks.proxy_on_logout',
+         'authentik.outposts.tasks.outpost_session_end'
+       )
+       AND state IN ('queued', 'running', 'consumed')
+     )
+)
+DELETE FROM authentik_tasks_task
+WHERE message_id IN (SELECT message_id FROM target);
+
+SELECT state, COUNT(*)
+FROM authentik_tasks_task
+GROUP BY state
+ORDER BY COUNT(*) DESC;
+"
+```
+
+Bring Authentik back:
+
+```bash
+sudo docker restart authentik-server
+sudo docker start authentik-worker
+curl -skI https://auth.homelab.local/
+```
+
+Expected result: `/` returns `302` to the login flow, `/-/health/live/` returns `200`, and `authentik-db` stops logging `too many clients already`.
+
+#### 3. Reset failed backup units after services settle
+
+Archwright jobs may fail during boot if NFS or app containers were not ready yet. After DNS/Auth are stable, reset the failed state and run one NAS job plus one Ryzen job manually.
+
+```bash
+ssh admin@10.0.0.10 "sudo systemctl reset-failed 'archwright-*.service' && sudo systemctl start archwright-authentik-db.service"
+ssh admin@10.0.0.30 "sudo systemctl reset-failed 'archwright-*.service' && sudo systemctl start archwright-paperless-db.service"
+```
+
+Finish with:
+
+```bash
+ansible-playbook -i inventory.ini smoke_test.yml
 ```
 
 ---

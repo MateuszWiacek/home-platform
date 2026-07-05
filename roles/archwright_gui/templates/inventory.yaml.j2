@@ -1,0 +1,10 @@
+nodes:
+{% for node in archwright_gui_nodes %}
+  {{ node.id }}:
+    executor: "{{ node.executor | default('ssh') }}"
+    host: "{{ node.host }}"
+    user: "{{ node.user }}"
+    port: {{ node.port | default(22) }}
+    config_dir: "{{ node.config_dir }}"
+    command: "{{ node.command }}"
+{% endfor %}

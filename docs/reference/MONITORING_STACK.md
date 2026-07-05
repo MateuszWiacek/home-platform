@@ -12,12 +12,12 @@ The monitoring stack covers metrics, logs, alerting, and notifications:
 - `cadvisor` on NAS and Ryzen
 - `smartctl_exporter` on NAS
 - `Promtail` on NAS and Ryzen
-- optional `Dozzle agent` on NAS
+- `Dozzle agent` on NAS
 - `Prometheus` on Ryzen
 - `Loki` on Ryzen
 - `Alertmanager` on Ryzen
 - `Grafana` on Ryzen
-- optional `Dozzle` on Ryzen
+- `Dozzle` on Ryzen
 - `ntfy` on NAS
 
 Not included:
@@ -36,7 +36,7 @@ The stack is still small but covers the full loop: metrics, logs, alerts, and de
 - `cadvisor`
 - `smartctl_exporter`
 - `Promtail` - ships container logs to Loki on Ryzen
-- optional `Dozzle agent` - exposes Docker socket for live log viewing
+- `Dozzle agent` - exposes Docker socket for live log viewing
 - `ntfy` - push notification server
 
 ### Ryzen
@@ -48,14 +48,14 @@ The stack is still small but covers the full loop: metrics, logs, alerts, and de
 - `Loki` - log aggregation and search
 - `Alertmanager`
 - `Grafana`
-- optional `Dozzle` - real-time log viewer (connects to local Docker + NAS agent)
+- `Dozzle` - real-time log viewer (connects to local Docker + NAS agent)
 
 Reasoning:
 
 - exporters and Promtail are lightweight and run on both hosts
 - scrape, alerting, log storage, and dashboards live on the Ryzen node
 - ntfy runs on NAS so it stays available even when Ryzen is down for maintenance
-- Grafana is exposed through Traefik by default; Dozzle is opt-in in the public branch because it requires a direct host port on the Ryzen node
+- Grafana and Dozzle are exposed through Traefik, everything else stays internal
 
 ---
 
@@ -124,7 +124,7 @@ Push notification server:
 - auth: open access on LAN (no Authentik dependency - alerts must arrive even during auth outage)
 - also receives weekly version drift reports on topic `homelab-updates`
 
-### `Dozzle` (optional)
+### `Dozzle`
 
 Real-time Docker log viewer:
 
@@ -149,8 +149,8 @@ The main UI:
 
 ### Public (via Traefik)
 
-- `Grafana`: `https://monitor.homelab.local`
-- `Dozzle`: `https://logs.homelab.local` (if enabled; local auth on a trusted LAN)
+- `Grafana`: `https://monitor.homelab.local` (ForwardAuth)
+- `Dozzle`: `https://logs.homelab.local` (local auth)
 - `ntfy`: `https://ntfy.homelab.local` (open - no ForwardAuth, must work during auth outages)
 
 ### Internal only
@@ -158,9 +158,9 @@ The main UI:
 - `Prometheus`: `http://10.0.0.30:9090` on Ryzen
 - `Alertmanager`: `http://10.0.0.30:9093` on Ryzen
 - `Loki`: `http://10.0.0.30:3100` on Ryzen (bound to LAN IP so NAS Promtail can push)
-- `Dozzle agent`: `http://10.0.0.10:7007` on NAS (if enabled)
+- `Dozzle agent`: `http://10.0.0.10:7007` on NAS
 
-Prometheus, Alertmanager, and Loki stay private. Grafana is the main day-to-day UI. Dozzle is an optional live-log shortcut.
+Prometheus, Alertmanager, and Loki stay private. Grafana and Dozzle are the day-to-day UIs.
 
 ---
 
@@ -190,7 +190,7 @@ In practice:
 4. ntfy pushes notification to your phone
 5. Promtail on each host tails Docker container logs and ships to Loki
 6. Grafana queries both Prometheus (metrics) and Loki (logs)
-7. If enabled, Dozzle provides a separate live log tail UI across both hosts
+7. Dozzle provides a separate live log tail UI across both hosts
 
 ---
 

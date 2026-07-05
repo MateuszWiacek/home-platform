@@ -1,0 +1,13 @@
+# Jellyfin backup - config database, users, watched state, and metadata.
+
+backup_name: "jellyfin_state"
+target_base_dir: "{{ archwright_backup_dir }}/jellyfin-state"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  jellyfin:
+    config:
+      source_dir: "{{ jellyfin_stack_dir }}"
+      include: "*"
+      pre_command: "docker stop jellyfin"
+      post_command: "docker start jellyfin"

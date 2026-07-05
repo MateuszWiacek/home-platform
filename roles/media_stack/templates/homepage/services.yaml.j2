@@ -133,13 +133,11 @@
         href: "https://{{ grafana_domain }}"
         description: "Metrics & Alerts Dashboard"
 {% endif %}
-{% if monitoring_enabled | default(false) | bool and dozzle_enabled | default(false) | bool %}
 
     - Dozzle:
         icon: dozzle.png
         href: "https://{{ dozzle_domain }}"
         description: "Real-time Container Logs"
-{% endif %}
 
 - Utility Tools:
     - Stirling-PDF:

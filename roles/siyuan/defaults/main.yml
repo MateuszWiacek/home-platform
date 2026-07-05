@@ -1,5 +1,10 @@
 ---
-siyuan_version: "latest"
+siyuan_version: "v3.6.0"
 siyuan_stack_dir: "{{ app_stacks_root | default('/opt') }}/siyuan"
 siyuan_workspace_dir: "{{ siyuan_stack_dir }}/workspace"
 siyuan_memory_limit: "512M"
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+siyuan_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

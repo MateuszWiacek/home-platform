@@ -1,5 +1,10 @@
 ---
-mealie_version: "latest"
+mealie_version: "v3.12.0"
 mealie_stack_dir: "{{ app_stacks_root | default('/opt') }}/mealie"
 mealie_data_dir: "{{ mealie_stack_dir }}/data"
 mealie_memory_limit: "512M"
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+mealie_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

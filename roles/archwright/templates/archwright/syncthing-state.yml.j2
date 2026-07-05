@@ -1,0 +1,13 @@
+# Syncthing backup - config, certificates, keys, and device identity.
+
+backup_name: "syncthing_state"
+target_base_dir: "{{ archwright_backup_dir }}/syncthing-state"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  syncthing:
+    config:
+      source_dir: "{{ syncthing_config_dir }}"
+      include: "*"
+      pre_command: "docker stop syncthing"
+      post_command: "docker start syncthing"

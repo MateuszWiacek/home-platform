@@ -5,6 +5,9 @@
 </p>
 
 [Architecture](ARCHITECTURE.md) | [Design Philosophy](DESIGN_PHILOSOPHY.md) | [Auth Model](docs/identity/AUTH_MODEL.md) | [Docs](docs/)
+
+[![Lint & Validate](https://github.com/MateuszWiacek/home-platform/actions/workflows/lint.yml/badge.svg)](https://github.com/MateuszWiacek/home-platform/actions/workflows/lint.yml)
+
 A working home platform, not a demo. Two nodes, one control plane: DNS, TLS, SSO, self-hosted apps, monitoring, and backups, all automated with Ansible. DNS, TLS, and SSO are designed as one stack, and if something breaks at 2am and I'm not around, my wife can follow the [recovery guide](docs/operations/NON_TECHNICAL_RECOVERY.md) and get the essentials back. That's the bar.
 
 ---
@@ -28,7 +31,7 @@ A working home platform, not a demo. Two nodes, one control plane: DNS, TLS, SSO
 ## Architecture Summary
 
 - **NAS / Intel N100 / TrueNAS SCALE**: AdGuard, Traefik, Authentik, Vaultwarden, Portainer, Jellyfin, Homepage, ntfy
-- **Ryzen VM / Debian on Proxmox**: Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, monitoring
+- **Ryzen VM / Debian on Proxmox**: Immich, Paperless-ngx, media/book apps, notes/tools, Syncthing, Dozzle, monitoring
 - **Storage model**: databases and caches stay on Ryzen NVMe; photos, documents, and app data live on NAS storage via NFS
 - **Ingress model**: Traefik runs on the NAS and fronts both nodes; remote apps route through the file provider
 
@@ -63,7 +66,7 @@ ansible-playbook -i inventory.ini deploy_docker_nodes.yml
 ansible-playbook -i inventory.ini smoke_test.yml
 ```
 
-Copy `secrets.yml.example` to `secrets.yml`, fill in the values, then encrypt it with Ansible Vault. Full command reference lives in [`docs/reference/DEPLOY_COMMANDS.md`](docs/reference/DEPLOY_COMMANDS.md).
+Copy `secrets.yml.example` to `secrets.yml`, fill in the values, then encrypt it with Ansible Vault. Backups use Archwright from a local checkout on the control node. Restore notes and full deploy commands live in [`docs/reference/BACKUP_STRATEGY.md`](docs/reference/BACKUP_STRATEGY.md) and [`docs/reference/DEPLOY_COMMANDS.md`](docs/reference/DEPLOY_COMMANDS.md).
 
 ---
 
@@ -78,3 +81,13 @@ smoke_test.yml          post-deploy health checks
 docs/                   architecture, identity, setup, operations, reference
 .github/workflows/      lint and syntax validation
 ```
+
+---
+
+## About This Public Copy
+
+This is the public, sanitized copy of a privately-developed home platform. A
+leak-gated publication filter ([`scripts/sanitize-for-publication.py`](scripts/sanitize-for-publication.py))
+strips operational identifiers (real domain, LAN addresses, storage paths, key
+names) and fails the build if any survive. Actively maintained; the public copy
+is refreshed from the private repo on each release.

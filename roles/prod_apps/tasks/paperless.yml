@@ -26,6 +26,12 @@
     creates: "{{ item }}"
   loop:
     - "{{ mnt_docs }}/consume"
+    - "{{ mnt_docs }}/consume/auto"
+    - "{{ mnt_docs }}/consume/agd-rtv"
+    - "{{ mnt_docs }}/consume/dom"
+    - "{{ mnt_docs }}/consume/finanse"
+    - "{{ mnt_docs }}/consume/inbox"
+    - "{{ mnt_docs }}/consume/inne"
     - "{{ mnt_docs }}/archive"
     - "{{ mnt_docs }}/data"
     - "{{ mnt_docs }}/media"
@@ -50,9 +56,36 @@
   no_log: true
   notify: Restart Paperless
 
+- name: "Paperless | Deploy baseline automation bootstrap"
+  ansible.builtin.template:
+    src: "paperless/bootstrap_baseline.py.j2"
+    dest: "{{ paperless_stack_dir }}/bootstrap_baseline.py"
+    owner: "{{ app_uid }}"
+    group: "{{ app_gid }}"
+    mode: '0644'
+
 # 5. Start the Paperless-ngx stack
 - name: "Paperless | Start containers"
   ansible.builtin.shell:
     cmd: "docker compose up -d --remove-orphans"
     chdir: "{{ paperless_stack_dir }}"
+  changed_when: false
+
+- name: "Paperless | Wait for webserver to become healthy"
+  ansible.builtin.shell:
+    cmd: |
+      for _ in $(seq 1 30); do
+        if [ "$(docker inspect -f '{{ "{{.State.Health.Status}}" }}' paperless_webserver 2>/dev/null)" = "healthy" ]; then
+          exit 0
+        fi
+        sleep 2
+      done
+      docker inspect paperless_webserver
+      exit 1
+  changed_when: false
+
+- name: "Paperless | Provision baseline automation"
+  ansible.builtin.shell:
+    cmd: "docker exec -i paperless_webserver python3 manage.py shell < {{ paperless_stack_dir }}/bootstrap_baseline.py"
+  register: paperless_bootstrap
   changed_when: false

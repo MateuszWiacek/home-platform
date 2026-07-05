@@ -60,7 +60,6 @@ audiobookshelf_enabled: true
 calibre_web_enabled: true
 syncthing_enabled: true
 monitoring_enabled: true
-dozzle_enabled: false
 
 # === Authentication mode per service ===
 # Valid values: local, forwardauth, oidc
@@ -87,8 +86,8 @@ linkwarden_auth_mode: "local"
 grafana_auth_mode: "forwardauth"
 # Ntfy: keep local (push notifications must work even if Authentik is down)
 ntfy_auth_mode: "local"
-# Dozzle is opt-in in the public branch. It exposes a direct host port on the
-# Ryzen node, so enable it only on a trusted LAN.
+# Dozzle stays local for now. ForwardAuth would also require a matching
+# Authentik proxy application and outpost assignment for logs.<domain>.
 dozzle_auth_mode: "local"
 
 # === Homepage ===

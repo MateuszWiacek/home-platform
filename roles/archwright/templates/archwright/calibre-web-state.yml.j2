@@ -1,0 +1,13 @@
+# Calibre-Web backup - app config and user database.
+
+backup_name: "calibre_web_state"
+target_base_dir: "{{ archwright_backup_dir }}/calibre-web-state"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  calibre_web:
+    config:
+      source_dir: "{{ calibre_web_config_dir }}"
+      include: "*"
+      pre_command: "docker stop calibre_web"
+      post_command: "docker start calibre_web"

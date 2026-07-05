@@ -1,0 +1,13 @@
+# Navidrome backup - app database, users, playlists, and scan state.
+
+backup_name: "navidrome_state"
+target_base_dir: "{{ archwright_backup_dir }}/navidrome-state"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  navidrome:
+    data:
+      source_dir: "{{ navidrome_data_dir }}"
+      include: "*"
+      pre_command: "docker stop navidrome"
+      post_command: "docker start navidrome"

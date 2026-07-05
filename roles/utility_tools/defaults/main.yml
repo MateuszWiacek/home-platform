@@ -1,10 +1,16 @@
 ---
 # Stirling-PDF
 utility_tools_root: "{{ app_stacks_root | default('/opt') }}"
-stirling_pdf_version: "latest"
+stirling_pdf_version: "2.7.2"
 stirling_pdf_stack_dir: "{{ utility_tools_root }}/stirling-pdf"
 stirling_pdf_memory_limit: "2G"
 
 # IT-Tools
-it_tools_version: "latest"
+it_tools_version: "2024.10.22-7ca5933"
 it_tools_stack_dir: "{{ utility_tools_root }}/it-tools"
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+stirling_pdf_bind_host: "{{ ansible_host | default(inventory_hostname) }}"
+it_tools_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

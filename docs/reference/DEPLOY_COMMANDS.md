@@ -39,6 +39,7 @@ ansible-playbook -i inventory.ini deploy_n100.yml --tags vaultwarden
 ansible-playbook -i inventory.ini deploy_n100.yml --tags portainer
 ansible-playbook -i inventory.ini deploy_n100.yml --tags media
 ansible-playbook -i inventory.ini deploy_n100.yml --tags archwright
+ansible-playbook -i inventory.ini deploy_n100.yml --tags archwright_gui -e archwright_gui_enabled=true
 
 # Entire core role
 ansible-playbook -i inventory.ini deploy_n100.yml --tags core

@@ -4,7 +4,7 @@ services:
     container_name: mealie
     restart: unless-stopped
     ports:
-      - "{{ mealie_service_port }}:9000"
+      - "{{ mealie_bind_host }}:{{ mealie_service_port }}:9000"
     environment:
       - PUID={{ app_uid }}
       - PGID={{ app_gid }}

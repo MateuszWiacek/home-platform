@@ -11,7 +11,7 @@ services:
     env_file:
       - .env
     ports:
-      - "{{ immich_service_port }}:2283"
+      - "{{ immich_bind_host }}:{{ immich_service_port }}:2283"
     restart: always
     deploy:
       resources:

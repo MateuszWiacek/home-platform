@@ -1,5 +1,4 @@
 ---
-dozzle_enabled: false
 dozzle_version: "v10.1.2"
 dozzle_stack_dir: "{{ app_stacks_root | default('/opt') }}/dozzle"
 dozzle_service_port: 8887

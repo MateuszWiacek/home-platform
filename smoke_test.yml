@@ -58,7 +58,7 @@
           { "name": "TrueNAS", "url": "https://%s" | format(truenas_domain) }
         ]
         + ([{ "name": "Grafana", "url": "https://%s" | format(grafana_domain) }] if monitoring_enabled | default(false) | bool else [])
-        + ([{ "name": "Dozzle", "url": "https://%s" | format(dozzle_domain) }] if monitoring_enabled | default(false) | bool and dozzle_enabled | default(false) | bool else [])
+        + ([{ "name": "Dozzle", "url": "https://%s" | format(dozzle_domain) }] if monitoring_enabled | default(false) | bool else [])
         + ([{ "name": "Ntfy", "url": "https://%s" | format(ntfy_domain) }])
         + ([{ "name": "Audiobookshelf", "url": "https://%s" | format(audiobookshelf_domain) }] if audiobookshelf_enabled | default(false) else [])
         + ([{ "name": "Calibre-Web", "url": "https://%s" | format(calibre_web_domain) }] if calibre_web_enabled | default(false) else [])
@@ -148,37 +148,30 @@
         - monitoring_enabled | default(false) | bool
         - smartctl_exporter_enabled | default(false) | bool
 
-    - name: "NAS | Gather service facts"
-      ansible.builtin.service_facts:
-
-    - name: "NAS | Assert archwright timers are active"
-      ansible.builtin.assert:
-        that:
-          - timer_unit in ansible_facts.services
-          - ansible_facts.services[timer_unit].status != "not-found"
-          - ansible_facts.services[timer_unit].state == "running"
-        fail_msg: "archwright timer {{ timer_unit }} is missing or inactive"
-        quiet: true
-      loop: "{{ archwright_jobs | default([]) | selectattr('enabled', 'equalto', true) | map(attribute='name') | list }}"
+    - name: "NAS | Check archwright timers are active"
+      ansible.builtin.systemd:
+        name: "archwright-{{ item.name }}.timer"
+      register: _nas_archwright_timers
+      loop: "{{ archwright_jobs | default([]) | selectattr('enabled', 'equalto', true) | list }}"
       loop_control:
-        loop_var: job_name
-        label: "{{ timer_unit }}"
-      vars:
-        timer_unit: "archwright-{{ job_name }}.timer"
+        label: "archwright-{{ item.name }}.timer"
+      failed_when: _nas_archwright_timers.status.ActiveState != 'active'
 
     - name: "NAS | Archwright timer status"
       ansible.builtin.debug:
-        msg: "{{ timer_unit }}: state={{ ansible_facts.services[timer_unit].state }}, status={{ ansible_facts.services[timer_unit].status }}"
-      loop: "{{ archwright_jobs | default([]) | selectattr('enabled', 'equalto', true) | map(attribute='name') | list }}"
+        msg: "archwright-{{ item.item.name }}.timer: {{ item.status.ActiveState }}"
+      loop: "{{ _nas_archwright_timers.results }}"
       loop_control:
-        loop_var: job_name
-        label: "{{ timer_unit }}"
-      vars:
-        timer_unit: "archwright-{{ job_name }}.timer"
+        label: "archwright-{{ item.item.name }}.timer"
 
     - name: "NAS | Validate archwright configs"
       ansible.builtin.command:
-        cmd: "{{ archwright_cli_path }} validate --config {{ item.config_path }}"
+        cmd: >-
+          {% if (archwright_run_user | default('root')) == 'root' %}
+          {{ archwright_cli_path | default(archwright_config_dir ~ '/archwright') }} validate --config {{ item.config_path }}
+          {% else %}
+          runuser -u {{ archwright_run_user }} -- {{ archwright_cli_path | default(archwright_config_dir ~ '/archwright') }} validate --config {{ item.config_path }}
+          {% endif %}
       loop: "{{ archwright_jobs | default([]) | selectattr('enabled', 'equalto', true) | list }}"
       loop_control:
         label: "{{ item.name }}"
@@ -212,8 +205,7 @@
           'linkwarden',
           'linkwarden_db'
         ]
-        + (['prometheus', 'grafana', 'alertmanager', 'loki', 'node_exporter', 'cadvisor', 'promtail'] if monitoring_enabled | default(false) | bool else [])
-        + (['dozzle'] if monitoring_enabled | default(false) | bool and dozzle_enabled | default(false) | bool else [])
+        + (['prometheus', 'grafana', 'alertmanager', 'loki', 'node_exporter', 'cadvisor', 'promtail', 'dozzle'] if monitoring_enabled | default(false) | bool else [])
         + (['audiobookshelf'] if audiobookshelf_enabled | default(false) else [])
         + (['calibre_web'] if calibre_web_enabled | default(false) else [])
         + (['syncthing'] if syncthing_enabled | default(false) else [])
@@ -454,37 +446,30 @@
         msg: "Syncthing: {{ 'OK' if _syncthing_ping.status in [200, 302, 401, 403] else 'UNREACHABLE (status: ' + (_syncthing_ping.status | string) + ')' }}"
       when: syncthing_enabled | default(false)
 
-    - name: "Ryzen | Gather service facts"
-      ansible.builtin.service_facts:
-
-    - name: "Ryzen | Assert archwright timers are active"
-      ansible.builtin.assert:
-        that:
-          - timer_unit in ansible_facts.services
-          - ansible_facts.services[timer_unit].status != "not-found"
-          - ansible_facts.services[timer_unit].state == "running"
-        fail_msg: "archwright timer {{ timer_unit }} is missing or inactive"
-        quiet: true
-      loop: "{{ archwright_jobs | default([]) | selectattr('enabled', 'equalto', true) | map(attribute='name') | list }}"
+    - name: "Ryzen | Check archwright timers are active"
+      ansible.builtin.systemd:
+        name: "archwright-{{ item.name }}.timer"
+      register: _ryzen_archwright_timers
+      loop: "{{ archwright_jobs | default([]) | selectattr('enabled', 'equalto', true) | list }}"
       loop_control:
-        loop_var: job_name
-        label: "{{ timer_unit }}"
-      vars:
-        timer_unit: "archwright-{{ job_name }}.timer"
+        label: "archwright-{{ item.name }}.timer"
+      failed_when: _ryzen_archwright_timers.status.ActiveState != 'active'
 
     - name: "Ryzen | Archwright timer status"
       ansible.builtin.debug:
-        msg: "{{ timer_unit }}: state={{ ansible_facts.services[timer_unit].state }}, status={{ ansible_facts.services[timer_unit].status }}"
-      loop: "{{ archwright_jobs | default([]) | selectattr('enabled', 'equalto', true) | map(attribute='name') | list }}"
+        msg: "archwright-{{ item.item.name }}.timer: {{ item.status.ActiveState }}"
+      loop: "{{ _ryzen_archwright_timers.results }}"
       loop_control:
-        loop_var: job_name
-        label: "{{ timer_unit }}"
-      vars:
-        timer_unit: "archwright-{{ job_name }}.timer"
+        label: "archwright-{{ item.item.name }}.timer"
 
     - name: "Ryzen | Validate archwright configs"
       ansible.builtin.command:
-        cmd: "{{ archwright_cli_path }} validate --config {{ item.config_path }}"
+        cmd: >-
+          {% if (archwright_run_user | default('root')) == 'root' %}
+          {{ archwright_cli_path | default(archwright_config_dir ~ '/archwright') }} validate --config {{ item.config_path }}
+          {% else %}
+          runuser -u {{ archwright_run_user }} -- {{ archwright_cli_path | default(archwright_config_dir ~ '/archwright') }} validate --config {{ item.config_path }}
+          {% endif %}
       loop: "{{ archwright_jobs | default([]) | selectattr('enabled', 'equalto', true) | list }}"
       loop_control:
         label: "{{ item.name }}"

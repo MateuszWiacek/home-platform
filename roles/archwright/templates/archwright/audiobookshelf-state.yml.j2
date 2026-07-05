@@ -1,0 +1,13 @@
+# Audiobookshelf backup - app config, users, progress, and metadata.
+
+backup_name: "audiobookshelf_state"
+target_base_dir: "{{ archwright_backup_dir }}/audiobookshelf-state"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  audiobookshelf:
+    state:
+      source_dir: "{{ audiobookshelf_stack_dir }}"
+      include: "*"
+      pre_command: "docker stop audiobookshelf"
+      post_command: "docker start audiobookshelf"

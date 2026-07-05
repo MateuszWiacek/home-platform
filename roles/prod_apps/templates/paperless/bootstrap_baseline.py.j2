@@ -1,0 +1,360 @@
+import json
+
+from documents.data_models import DocumentSource
+from documents.models import MatchingModel
+from documents.models import StoragePath
+from documents.models import Tag
+from documents.models import Workflow
+from documents.serialisers import StoragePathSerializer
+from documents.serialisers import WorkflowSerializer
+
+
+TAG_SPECS = [
+    {"name": "auto", "color": "#ef6c00"},
+    {"name": "dom", "color": "#00897b"},
+    {"name": "agd-rtv", "color": "#5e35b1", "parent": "dom"},
+    {"name": "finanse", "color": "#3949ab"},
+    {"name": "inbox", "color": "#c62828"},
+    {"name": "inne", "color": "#546e7a"},
+]
+
+STORAGE_PATH_SPECS = [
+    {
+        "name": "Inbox",
+        "path": "{% raw %}Inbox/{{ created_year }}/{{ created }} {{ title }}{% endraw %}",
+    },
+    {
+        "name": "Auto",
+        "path": "{% raw %}Auto/{{ created_year }}/{{ correspondent }}/{{ created }} {{ title }}{% endraw %}",
+    },
+    {
+        "name": "AGD / RTV",
+        "path": "{% raw %}Dom/AGD-RTV/{{ created_year }}/{{ correspondent }}/{{ created }} {{ title }}{% endraw %}",
+    },
+    {
+        "name": "Dom",
+        "path": "{% raw %}Dom/{{ created_year }}/{{ correspondent }}/{{ created }} {{ title }}{% endraw %}",
+    },
+    {
+        "name": "Finanse",
+        "path": "{% raw %}Finanse/{{ created_year }}/{{ correspondent }}/{{ created }} {{ title }}{% endraw %}",
+    },
+    {
+        "name": "Inne",
+        "path": "{% raw %}Inne/{{ created_year }}/{{ correspondent }}/{{ created }} {{ title }}{% endraw %}",
+    },
+]
+
+
+summary = {
+    "tags": [],
+    "storage_paths": [],
+    "workflows": [],
+}
+
+
+def ensure_tag(spec, tags_by_name):
+    defaults = {
+        "color": spec["color"],
+        "match": "",
+        "matching_algorithm": MatchingModel.MATCH_NONE,
+        "is_insensitive": True,
+        "is_inbox_tag": False,
+    }
+    tag, created = Tag.objects.get_or_create(name=spec["name"], defaults=defaults)
+    updated = False
+
+    for field, value in defaults.items():
+        if getattr(tag, field) != value:
+            setattr(tag, field, value)
+            updated = True
+
+    parent_name = spec.get("parent")
+    parent = tags_by_name.get(parent_name) if parent_name else None
+    if tag.tn_parent_id != (parent.id if parent else None):
+        tag.tn_parent = parent
+        updated = True
+
+    if updated:
+        tag.save()
+
+    summary["tags"].append(
+        {
+            "name": tag.name,
+            "created": created,
+            "updated": updated,
+        }
+    )
+    return tag
+
+
+def ensure_storage_path(spec):
+    payload = {
+        "name": spec["name"],
+        "path": spec["path"],
+        "match": "",
+        "matching_algorithm": MatchingModel.MATCH_NONE,
+        "is_insensitive": True,
+    }
+    existing = StoragePath.objects.filter(name=spec["name"]).first()
+    unchanged = (
+        existing is not None
+        and existing.path == payload["path"]
+        and existing.match == payload["match"]
+        and existing.matching_algorithm == payload["matching_algorithm"]
+        and existing.is_insensitive == payload["is_insensitive"]
+    )
+
+    if unchanged:
+        storage_path = existing
+        created = False
+        updated = False
+    else:
+        serializer = StoragePathSerializer(instance=existing, data=payload)
+        serializer.is_valid(raise_exception=True)
+        storage_path = serializer.save()
+        created = existing is None
+        updated = existing is not None
+
+    summary["storage_paths"].append(
+        {
+            "name": storage_path.name,
+            "created": created,
+            "updated": updated,
+        }
+    )
+    return storage_path
+
+
+def workflow_is_in_sync(workflow, spec):
+    if workflow is None:
+        return False
+
+    triggers = list(workflow.triggers.all())
+    actions = list(workflow.actions.order_by("order", "pk"))
+    if len(triggers) != 1 or len(actions) != 1:
+        return False
+
+    trigger = triggers[0]
+    action = actions[0]
+
+    if workflow.order != spec["order"] or workflow.enabled is not True:
+        return False
+
+    desired_trigger = spec["trigger"]
+    desired_sources = sorted(str(source) for source in desired_trigger["sources"])
+    current_sources = sorted(str(source) for source in trigger.sources)
+    if current_sources != desired_sources:
+        return False
+
+    trigger_checks = (
+        trigger.type == desired_trigger["type"],
+        (trigger.filter_path or "") == (desired_trigger["filter_path"] or ""),
+        (trigger.filter_filename or "") == (desired_trigger["filter_filename"] or ""),
+        trigger.matching_algorithm == desired_trigger["matching_algorithm"],
+        (trigger.match or "") == desired_trigger["match"],
+        trigger.is_insensitive is True,
+        trigger.filter_mailrule_id is None,
+        trigger.filter_has_document_type_id is None,
+        trigger.filter_has_correspondent_id is None,
+        trigger.filter_has_storage_path_id is None,
+        trigger.schedule_offset_days == 0,
+        trigger.schedule_is_recurring is False,
+        trigger.schedule_recurring_interval_days == 1,
+        trigger.schedule_date_custom_field_id is None,
+        trigger.filter_has_tags.count() == 0,
+        trigger.filter_has_all_tags.count() == 0,
+        trigger.filter_has_not_tags.count() == 0,
+        trigger.filter_has_not_correspondents.count() == 0,
+        trigger.filter_has_not_document_types.count() == 0,
+        trigger.filter_has_not_storage_paths.count() == 0,
+    )
+    if not all(trigger_checks):
+        return False
+
+    desired_action = spec["action"]
+    action_checks = (
+        action.type == desired_action["type"],
+        action.order == 0,
+        action.assign_storage_path_id == desired_action["assign_storage_path"],
+        action.assign_title in (None, ""),
+        action.assign_document_type_id is None,
+        action.assign_correspondent_id is None,
+        action.assign_owner_id is None,
+        action.assign_custom_fields_values in ({}, None),
+        action.remove_all_tags is False,
+        action.remove_all_document_types is False,
+        action.remove_all_correspondents is False,
+        action.remove_all_storage_paths is False,
+        action.remove_all_owners is False,
+        action.remove_all_permissions is False,
+        action.remove_all_custom_fields is False,
+        action.email_id is None,
+        action.webhook_id is None,
+        action.assign_tags.count() == 0,
+        action.assign_view_users.count() == 0,
+        action.assign_view_groups.count() == 0,
+        action.assign_change_users.count() == 0,
+        action.assign_change_groups.count() == 0,
+        action.assign_custom_fields.count() == 0,
+        action.remove_tags.count() == 0,
+        action.remove_document_types.count() == 0,
+        action.remove_correspondents.count() == 0,
+        action.remove_storage_paths.count() == 0,
+        action.remove_owners.count() == 0,
+        action.remove_view_users.count() == 0,
+        action.remove_view_groups.count() == 0,
+        action.remove_change_users.count() == 0,
+        action.remove_change_groups.count() == 0,
+        action.remove_custom_fields.count() == 0,
+    )
+    return all(action_checks)
+
+
+def ensure_workflow(spec):
+    payload = {
+        "name": spec["name"],
+        "order": spec["order"],
+        "enabled": True,
+        "triggers": [spec["trigger"]],
+        "actions": [spec["action"]],
+    }
+    existing = Workflow.objects.filter(name=spec["name"]).first()
+
+    if workflow_is_in_sync(existing, spec):
+        workflow = existing
+        created = False
+        updated = False
+    else:
+        serializer = WorkflowSerializer(instance=existing, data=payload)
+        serializer.is_valid(raise_exception=True)
+        workflow = serializer.save()
+        created = existing is None
+        updated = existing is not None
+
+    summary["workflows"].append(
+        {
+            "name": workflow.name,
+            "created": created,
+            "updated": updated,
+        }
+    )
+
+
+tags_by_name = {}
+for tag_spec in TAG_SPECS:
+    tags_by_name[tag_spec["name"]] = ensure_tag(tag_spec, tags_by_name)
+
+storage_paths_by_name = {}
+for storage_path_spec in STORAGE_PATH_SPECS:
+    storage_paths_by_name[storage_path_spec["name"]] = ensure_storage_path(storage_path_spec)
+
+workflow_specs = [
+    {
+        "name": "Consume catch-all -> Inbox",
+        "order": 0,
+        "trigger": {
+            "sources": [str(DocumentSource.ConsumeFolder.value)],
+            "type": 1,
+            "filter_path": "",
+            "filter_filename": "*",
+            "matching_algorithm": 0,
+            "match": "",
+            "is_insensitive": True,
+        },
+        "action": {
+            "type": 1,
+            "assign_storage_path": storage_paths_by_name["Inbox"].id,
+        },
+    },
+    {
+        "name": "Consume auto -> Auto",
+        "order": 10,
+        "trigger": {
+            "sources": [str(DocumentSource.ConsumeFolder.value)],
+            "type": 1,
+            "filter_path": "*/auto/*",
+            "filter_filename": "",
+            "matching_algorithm": 0,
+            "match": "",
+            "is_insensitive": True,
+        },
+        "action": {
+            "type": 1,
+            "assign_storage_path": storage_paths_by_name["Auto"].id,
+        },
+    },
+    {
+        "name": "Consume agd-rtv -> AGD / RTV",
+        "order": 20,
+        "trigger": {
+            "sources": [str(DocumentSource.ConsumeFolder.value)],
+            "type": 1,
+            "filter_path": "*/agd-rtv/*",
+            "filter_filename": "",
+            "matching_algorithm": 0,
+            "match": "",
+            "is_insensitive": True,
+        },
+        "action": {
+            "type": 1,
+            "assign_storage_path": storage_paths_by_name["AGD / RTV"].id,
+        },
+    },
+    {
+        "name": "Consume dom -> Dom",
+        "order": 30,
+        "trigger": {
+            "sources": [str(DocumentSource.ConsumeFolder.value)],
+            "type": 1,
+            "filter_path": "*/dom/*",
+            "filter_filename": "",
+            "matching_algorithm": 0,
+            "match": "",
+            "is_insensitive": True,
+        },
+        "action": {
+            "type": 1,
+            "assign_storage_path": storage_paths_by_name["Dom"].id,
+        },
+    },
+    {
+        "name": "Consume finanse -> Finanse",
+        "order": 40,
+        "trigger": {
+            "sources": [str(DocumentSource.ConsumeFolder.value)],
+            "type": 1,
+            "filter_path": "*/finanse/*",
+            "filter_filename": "",
+            "matching_algorithm": 0,
+            "match": "",
+            "is_insensitive": True,
+        },
+        "action": {
+            "type": 1,
+            "assign_storage_path": storage_paths_by_name["Finanse"].id,
+        },
+    },
+    {
+        "name": "Consume inne -> Inne",
+        "order": 50,
+        "trigger": {
+            "sources": [str(DocumentSource.ConsumeFolder.value)],
+            "type": 1,
+            "filter_path": "*/inne/*",
+            "filter_filename": "",
+            "matching_algorithm": 0,
+            "match": "",
+            "is_insensitive": True,
+        },
+        "action": {
+            "type": 1,
+            "assign_storage_path": storage_paths_by_name["Inne"].id,
+        },
+    },
+]
+
+for workflow_spec in workflow_specs:
+    ensure_workflow(workflow_spec)
+
+print(json.dumps(summary, indent=2, sort_keys=True))

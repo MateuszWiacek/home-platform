@@ -1,8 +1,13 @@
 ---
-linkwarden_version: "latest"
+linkwarden_version: "v2.13.5"
 linkwarden_stack_dir: "{{ app_stacks_root | default('/opt') }}/linkwarden"
 linkwarden_db_dir: "{{ linkwarden_stack_dir }}/postgres"
 linkwarden_data_dir: "{{ linkwarden_stack_dir }}/data"
 linkwarden_postgres_image: "docker.io/library/postgres:16-alpine"
 linkwarden_memory_limit: "1024M"
 linkwarden_db_memory_limit: "256M"
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+linkwarden_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

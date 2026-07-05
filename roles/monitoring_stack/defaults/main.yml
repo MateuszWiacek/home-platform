@@ -23,3 +23,8 @@ smartctl_temperature_warning_celsius: 50
 smartctl_temperature_critical_celsius: 55
 loki_retention_period: "168h"
 loki_service_port: 3100
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+grafana_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

@@ -1,0 +1,54 @@
+---
+- name: "Validate | Docker is available"
+  ansible.builtin.command:
+    cmd: "docker info"
+  check_mode: false
+  changed_when: false
+  failed_when: false
+  register: _docker_check
+
+- name: "Validate | Docker is running"
+  ansible.builtin.assert:
+    that: _docker_check.rc == 0
+    fail_msg: "Docker is not running or not accessible on this host."
+    quiet: true
+
+- name: "Validate | Dedicated SSH key is configured"
+  ansible.builtin.assert:
+    that:
+      - archwright_gui_ssh_private_key is defined
+      - archwright_gui_ssh_private_key | length > 0
+    fail_msg: >-
+      archwright_gui requires vault_archwright_gui_ssh_private_key in
+      secrets.yml. Use a dedicated key for the web UI, not your personal
+      SSH key.
+    quiet: true
+
+- name: "Validate | Inventory nodes are configured"
+  ansible.builtin.assert:
+    that:
+      - archwright_gui_nodes | length > 0
+    fail_msg: "archwright_gui_nodes must contain at least one SSH node."
+    quiet: true
+
+- name: "Validate | Local archwright source files exist on control node"
+  ansible.builtin.stat:
+    path: "{{ archwright_gui_local_source_dir }}/{{ item }}"
+  loop:
+    - "Dockerfile"
+    - "requirements-web.lock"
+  delegate_to: localhost
+  become: false
+  register: _archwright_gui_source_files
+
+- name: "Validate | Local archwright source files result"
+  ansible.builtin.assert:
+    that:
+      - _archwright_gui_source_files.results
+        | map(attribute='stat.exists')
+        | min
+    fail_msg: >-
+      archwright source files were not found at
+      {{ archwright_gui_local_source_dir }}. Override
+      archwright_gui_local_source_dir if the repository lives elsewhere.
+    quiet: true

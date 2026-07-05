@@ -1,0 +1,6 @@
+---
+- name: Restart Archwright GUI
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --build --remove-orphans"
+    chdir: "{{ archwright_gui_stack_dir }}"
+  when: not ansible_check_mode

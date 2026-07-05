@@ -1,10 +1,10 @@
 services:
   excalidraw:
-    image: excalidraw/excalidraw:{{ excalidraw_version }}
+    image: "{{ excalidraw_image }}"
     container_name: excalidraw
     restart: unless-stopped
     ports:
-      - "{{ excalidraw_service_port }}:80"
+      - "{{ excalidraw_bind_host }}:{{ excalidraw_service_port }}:80"
     environment:
       - NODE_ENV=production
     volumes:

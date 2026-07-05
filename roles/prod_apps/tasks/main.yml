@@ -44,10 +44,27 @@
     - { src: "{{ nas_source_media }}", path: "{{ mnt_media }}" }
   tags: [backups]
 
+- name: "Prod Apps | Ensure media child mount points exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+  loop: "{{ nas_media_child_mounts | default([]) }}"
+  tags: [backups]
+
+- name: "Prod Apps | Mount media child datasets"
+  ansible.posix.mount:
+    src: "{{ nas_ip }}:{{ item.src }}"
+    path: "{{ item.path }}"
+    fstype: nfs
+    opts: "rw,relatime,hard,tcp,timeo=600,retrans=2,vers=3"
+    state: mounted
+  loop: "{{ nas_media_child_mounts | default([]) }}"
+  tags: [backups]
+
 - name: "Prod Apps | Remove legacy DB backup cron job"
   ansible.builtin.cron:
     name: "Daily Docker DB Backup"
-    user: "{{ archwright_run_user | default('backupuser') }}"
+    user: "{{ archwright_run_user | default('backup') }}"
     state: absent
   tags: [backups]
 

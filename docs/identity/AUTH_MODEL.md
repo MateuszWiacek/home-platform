@@ -47,15 +47,15 @@ For setup instructions, see [`FORWARDAUTH_SETUP.md`](FORWARDAUTH_SETUP.md), [`OI
 | SiYuan | Ryzen | Local | Current access-code model is simple and predictable |
 | Mealie | Ryzen | Native OIDC | Good candidate for central user login |
 | Linkwarden | Ryzen | Native OIDC | Strong fit for central sign-in |
-| Dozzle | Ryzen | Local | Optional internal debugging tool; keep it on a trusted LAN |
+| Dozzle | Ryzen | Local | Internal debugging tool; must work during auth outages |
 | ntfy | NAS | Local | Alert delivery must work when Authentik is down |
 | Syncthing | Ryzen | Local | GUI is secondary; sync protocol is the real service |
 
 ---
 
-## Current example auth-mode values
+## Current live auth-mode values
 
-Auth mode is configured per service in `group_vars/all.yml`. The example values in this branch are:
+Auth mode is configured per service in `group_vars/all.yml`. Current live values on `main`:
 
 ```yaml
 adguard_auth_mode: forwardauth
@@ -80,18 +80,17 @@ syncthing_auth_mode: local
 linkwarden_auth_mode: local
 ntfy_auth_mode: local
 dozzle_auth_mode: local
-dozzle_enabled: false
 ```
 
 Default for all services is `local`. Services move to `forwardauth` or `oidc` deliberately, never by accident.
 
-The target model in this document is broader than the current rollout, but Wave 1 and Wave 2 are already implemented in the reference deployment.
+The target model in this document is broader than the current live rollout, but Wave 1 and Wave 2 are already active on `main`.
 
 Benefits of per-service mode:
 - No accidental lockout from a single global flag
 - Clear documentation of intended auth per service
 - Easier future rollout and safer rollback
-- Current branch behavior stays stable until you intentionally change a service
+- Current production behavior stays stable until you intentionally change a service
 
 ---
 

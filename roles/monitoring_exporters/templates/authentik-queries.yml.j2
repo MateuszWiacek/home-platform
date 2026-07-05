@@ -14,6 +14,25 @@ authentik_task_queue:
         usage: "GAUGE"
         description: "Queued Authentik tasks by actor"
 
+authentik_task_table:
+  query: |
+    SELECT
+      state,
+      COUNT(*)::double precision AS total_tasks,
+      COALESCE(EXTRACT(EPOCH FROM (NOW() - MIN(mtime))), 0)::double precision AS oldest_task_age_seconds
+    FROM authentik_tasks_task
+    GROUP BY state
+  metrics:
+    - state:
+        usage: "LABEL"
+        description: "Authentik task state"
+    - total_tasks:
+        usage: "GAUGE"
+        description: "Total Authentik tasks by state"
+    - oldest_task_age_seconds:
+        usage: "GAUGE"
+        description: "Age in seconds of the oldest Authentik task by state"
+
 authentik_channel_messages:
   query: |
     SELECT

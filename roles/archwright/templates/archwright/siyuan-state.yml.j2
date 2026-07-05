@@ -1,0 +1,13 @@
+# SiYuan backup - workspace notes and assets.
+
+backup_name: "siyuan_state"
+target_base_dir: "{{ archwright_backup_dir }}/siyuan-state"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  siyuan:
+    workspace:
+      source_dir: "{{ siyuan_workspace_dir }}"
+      include: "*"
+      pre_command: "docker stop siyuan"
+      post_command: "docker start siyuan"

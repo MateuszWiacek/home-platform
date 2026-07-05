@@ -1,0 +1,128 @@
+---
+- name: "Archwright GUI | Pre-flight validation"
+  ansible.builtin.import_tasks: validate.yml
+  tags: [validate]
+
+- name: "Archwright GUI | Ensure stack directories exist"
+  ansible.builtin.file:
+    path: "{{ item.path }}"
+    state: directory
+    owner: "{{ item.owner | default('root') }}"
+    group: "{{ item.group | default('root') }}"
+    mode: "{{ item.mode }}"
+  loop:
+    - { path: "{{ archwright_gui_stack_dir }}", mode: '0755' }
+    - { path: "{{ archwright_gui_source_dir }}", mode: '0755' }
+    - path: "{{ archwright_gui_ssh_dir }}"
+      owner: "{{ archwright_gui_container_uid }}"
+      group: "root"
+      mode: '0700'
+  loop_control:
+    label: "{{ item.path }}"
+
+- name: "Archwright GUI | Remove previous source snapshot"
+  ansible.builtin.file:
+    path: "{{ archwright_gui_source_dir }}/{{ item }}"
+    state: absent
+  loop:
+    - "backup"
+    - "archwright_web"
+    - "Dockerfile"
+    - "README.md"
+    - "pyproject.toml"
+    - "requirements-web.lock"
+    - ".dockerignore"
+
+- name: "Archwright GUI | Deploy source snapshot"
+  ansible.builtin.copy:
+    src: "{{ archwright_gui_local_source_dir }}/{{ item }}"
+    dest: "{{ archwright_gui_source_dir }}/"
+    owner: root
+    group: root
+    mode: preserve
+  loop:
+    - "backup"
+    - "archwright_web"
+    - "Dockerfile"
+    - "README.md"
+    - "pyproject.toml"
+    - "requirements-web.lock"
+    - ".dockerignore"
+  notify: Restart Archwright GUI
+
+- name: "Archwright GUI | Deploy inventory"
+  ansible.builtin.template:
+    src: "inventory.yaml.j2"
+    dest: "{{ archwright_gui_inventory_path }}"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Archwright GUI
+
+- name: "Archwright GUI | Deploy SSH private key"
+  ansible.builtin.copy:
+    content: "{{ archwright_gui_ssh_private_key | trim }}\n"
+    dest: "{{ archwright_gui_private_key_path }}"
+    owner: "{{ archwright_gui_container_uid }}"
+    group: root
+    mode: '0600'
+  no_log: true
+  notify: Restart Archwright GUI
+
+- name: "Archwright GUI | Build known_hosts"
+  ansible.builtin.shell: |
+    set -eu
+    tmp="$(mktemp)"
+    {% for node in archwright_gui_nodes %}
+    ssh-keyscan -p {{ node.port | default(22) }} {{ node.host }} >> "$tmp"
+    {% endfor %}
+    sort -u "$tmp" > "{{ archwright_gui_known_hosts_path }}"
+    rm -f "$tmp"
+  args:
+    executable: /bin/sh
+  changed_when: true
+  when: not ansible_check_mode
+  notify: Restart Archwright GUI
+
+- name: "Archwright GUI | Set known_hosts permissions"
+  ansible.builtin.file:
+    path: "{{ archwright_gui_known_hosts_path }}"
+    owner: "{{ archwright_gui_container_uid }}"
+    group: root
+    mode: '0644'
+  when: not ansible_check_mode
+
+- name: "Archwright GUI | Install constrained sudoers rules"
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/archwright-gui"
+    owner: root
+    group: root
+    mode: '0440'
+    content: |
+      {% for rule in archwright_gui_sudoers_rules %}
+      {{ rule.user }} ALL=(root) NOPASSWD: {{ rule.command }}
+      {% endfor %}
+    validate: "{{ archwright_gui_visudo_path }} -cf %s"
+  when: archwright_gui_sudoers_enabled | bool
+
+- name: "Archwright GUI | Remove constrained sudoers rules"
+  ansible.builtin.file:
+    path: "/etc/sudoers.d/archwright-gui"
+    state: absent
+  when: not (archwright_gui_sudoers_enabled | bool)
+
+- name: "Archwright GUI | Deploy docker-compose"
+  ansible.builtin.template:
+    src: "docker-compose.yml.j2"
+    dest: "{{ archwright_gui_stack_dir }}/docker-compose.yml"
+    owner: root
+    group: root
+    mode: '0644'
+  notify: Restart Archwright GUI
+
+- name: "Archwright GUI | Start container"
+  ansible.builtin.shell:
+    cmd: "docker compose up -d --build --remove-orphans"
+    chdir: "{{ archwright_gui_stack_dir }}"
+  changed_when: false
+  when: not ansible_check_mode

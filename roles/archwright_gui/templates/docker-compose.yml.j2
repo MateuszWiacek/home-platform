@@ -1,0 +1,56 @@
+services:
+  archwright-gui:
+    container_name: "{{ archwright_gui_container_name }}"
+    build:
+      context: "{{ archwright_gui_source_dir }}"
+    image: "{{ archwright_gui_image }}"
+    command:
+      - "serve"
+      - "--inventory"
+      - "/inventory.yaml"
+      - "--host"
+      - "0.0.0.0"
+      - "--port"
+      - "8471"
+    restart: unless-stopped
+    volumes:
+      - type: bind
+        source: "{{ archwright_gui_inventory_path }}"
+        target: "/inventory.yaml"
+        read_only: true
+      - type: bind
+        source: "{{ archwright_gui_known_hosts_path }}"
+        target: "/home/archwright/.ssh/known_hosts"
+        read_only: true
+      - type: bind
+        source: "{{ archwright_gui_private_key_path }}"
+        target: "/home/archwright/.ssh/id_ed25519"
+        read_only: true
+      - type: bind
+        source: "/etc/localtime"
+        target: "/etc/localtime"
+        read_only: true
+    ports:
+      - "{{ nas_ip }}:{{ archwright_gui_service_port }}:8471"
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.archwright-gui.rule: >-
+        Host(`{{ archwright_gui_domain }}`)
+      traefik.http.routers.archwright-gui.entrypoints: "websecure"
+      traefik.http.routers.archwright-gui.tls.certresolver: "myresolver"
+{% if archwright_gui_auth_mode == 'forwardauth' %}
+      traefik.http.routers.archwright-gui.middlewares: "authentik-auth@file"
+{% endif %}
+      traefik.http.services.archwright-gui.loadbalancer.server.port: "8471"
+    networks:
+      - proxy_net
+    security_opt:
+      - no-new-privileges:true
+    deploy:
+      resources:
+        limits:
+          memory: "{{ archwright_gui_memory_limit }}"
+
+networks:
+  proxy_net:
+    external: true

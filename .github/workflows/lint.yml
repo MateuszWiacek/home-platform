@@ -24,7 +24,7 @@ jobs:
       - name: Install toolchain
         run: |
           pip install --upgrade pip
-          pip install ansible-core ansible-lint yamllint
+          pip install ansible-core ansible-lint yamllint pytest PyYAML
 
       - name: Install Ansible Galaxy collections
         run: ansible-galaxy collection install -r requirements.yml
@@ -41,6 +41,9 @@ jobs:
 
       - name: ansible-lint
         run: ansible-lint
+
+      - name: Version check unit tests
+        run: pytest tests/test_version_check.py -q
 
       - name: Ansible syntax check (NAS playbook)
         run: ansible-playbook -i inventory.ini deploy_n100.yml --syntax-check

@@ -22,3 +22,6 @@
       when: monitoring_enabled | default(false) | bool
     - role: archwright
       tags: ['backups', 'archwright']
+    - role: archwright_gui
+      tags: ['backups', 'archwright', 'archwright_gui']
+      when: archwright_gui_enabled | default(false) | bool

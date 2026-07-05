@@ -2,7 +2,7 @@
 # Ansible-lint configuration for homelab CI
 
 # Profiles: min, basic, moderate, safety, shared, production
-# Start with basic — tighten later as codebase matures.
+# Start with basic - tighten later as codebase matures.
 profile: basic
 
 # Exclude paths that are not Ansible content
@@ -16,7 +16,7 @@ skip_list:
   - command-instead-of-shell
   # Jinja2 in YAML values triggers false positives
   - yaml[truthy]
-  # Some role names use underscores (core_services, media_stack) — that's fine
+  # Some role names use underscores (core_services, media_stack) - that's fine
   - role-name
   # Role defaults intentionally expose operator-facing variable names shared
   # across roles. Prefixing every default with the role name adds noise without

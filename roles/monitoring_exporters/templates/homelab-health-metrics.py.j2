@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import glob
+import json
+import os
+import subprocess
+import tempfile
+import time
+
+
+HOST = "{{ monitoring_exporters_host_label }}"
+TEXTFILE_DIR = "{{ node_exporter_textfile_dir }}"
+OUTPUT_FILE = os.path.join(TEXTFILE_DIR, "homelab_health.prom")
+
+
+def run(command: list[str]) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        command,
+        check=False,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+
+def label(value: str) -> str:
+    return value.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "")
+
+
+def line(name: str, labels: dict[str, str], value: int | float) -> str:
+    rendered = ",".join(f'{key}="{label(str(val))}"' for key, val in labels.items())
+    return name + "{" + rendered + "} " + str(value)
+
+
+def collect_docker(metrics: list[str]) -> None:
+    ids = run(["docker", "ps", "-aq"])
+    if ids.returncode != 0:
+        metrics.append(line(
+            "homelab_health_collector_success",
+            {"host": HOST, "collector": "docker"},
+            0,
+        ))
+        return
+
+    container_ids = [item for item in ids.stdout.splitlines() if item]
+    metrics.append(line(
+        "homelab_health_collector_success",
+        {"host": HOST, "collector": "docker"},
+        1,
+    ))
+    if not container_ids:
+        return
+
+    inspected = run(["docker", "inspect", *container_ids])
+    if inspected.returncode != 0:
+        metrics.append(line(
+            "homelab_health_collector_success",
+            {"host": HOST, "collector": "docker_inspect"},
+            0,
+        ))
+        return
+
+    for container in json.loads(inspected.stdout):
+        name = container.get("Name", "").lstrip("/")
+        state = container.get("State", {})
+        health = state.get("Health", {}).get("Status")
+        running = 1 if state.get("Running") else 0
+        restart_count = container.get("RestartCount", 0)
+
+        labels = {"host": HOST, "container": name}
+        metrics.append(line("homelab_container_running", labels, running))
+        metrics.append(line("homelab_container_restart_count", labels, restart_count))
+
+        if health:
+            health_labels = {**labels, "status": health}
+            metrics.append(line(
+                "homelab_container_health_healthy",
+                health_labels,
+                1 if health == "healthy" else 0,
+            ))
+
+
+def systemctl_show(unit: str) -> dict[str, str]:
+    result = run([
+        "systemctl",
+        "show",
+        unit,
+        "--property=ActiveState",
+        "--property=Result",
+        "--property=ExecMainStatus",
+        "--property=InactiveExitTimestamp",
+        "--no-pager",
+    ])
+    props: dict[str, str] = {}
+    for raw in result.stdout.splitlines():
+        if "=" not in raw:
+            continue
+        key, value = raw.split("=", 1)
+        props[key] = value
+    return props
+
+
+def timestamp_to_epoch(raw: str) -> int:
+    if not raw or raw == "n/a":
+        return 0
+    result = run(["date", "-d", raw, "+%s"])
+    if result.returncode != 0:
+        return 0
+    try:
+        return int(result.stdout.strip())
+    except ValueError:
+        return 0
+
+
+def collect_archwright(metrics: list[str]) -> None:
+    unit_paths = sorted(glob.glob("/etc/systemd/system/archwright-*.service"))
+    metrics.append(line(
+        "homelab_health_collector_success",
+        {"host": HOST, "collector": "archwright"},
+        1,
+    ))
+
+    for unit_path in unit_paths:
+        unit = os.path.basename(unit_path)
+        props = systemctl_show(unit)
+        result = props.get("Result", "")
+        status = int(props.get("ExecMainStatus", "1") or "1")
+        active_state = props.get("ActiveState", "")
+        timestamp = timestamp_to_epoch(props.get("InactiveExitTimestamp", ""))
+        success = 1 if result == "success" and status == 0 else 0
+
+        labels = {
+            "host": HOST,
+            "unit": unit,
+            "active_state": active_state,
+            "result": result or "unknown",
+        }
+        metrics.append(line("homelab_systemd_unit_last_success", labels, success))
+        metrics.append(line("homelab_systemd_unit_last_exit_status", labels, status))
+        metrics.append(line("homelab_systemd_unit_last_run_timestamp_seconds", labels, timestamp))
+
+
+def write_metrics(metrics: list[str]) -> None:
+    os.makedirs(TEXTFILE_DIR, exist_ok=True)
+    header = [
+        "# HELP homelab_container_running Docker container running state.",
+        "# TYPE homelab_container_running gauge",
+        "# HELP homelab_container_health_healthy Docker healthcheck state for containers with healthchecks.",
+        "# TYPE homelab_container_health_healthy gauge",
+        "# HELP homelab_systemd_unit_last_success Last systemd oneshot run result.",
+        "# TYPE homelab_systemd_unit_last_success gauge",
+        "# HELP homelab_systemd_unit_last_run_timestamp_seconds Last systemd oneshot completion timestamp.",
+        "# TYPE homelab_systemd_unit_last_run_timestamp_seconds gauge",
+    ]
+    content = "\n".join([*header, *metrics, ""])
+    fd, tmp_path = tempfile.mkstemp(prefix=".homelab_health.", suffix=".prom", dir=TEXTFILE_DIR)
+    with os.fdopen(fd, "w") as handle:
+        handle.write(content)
+    os.chmod(tmp_path, 0o644)
+    os.replace(tmp_path, OUTPUT_FILE)
+
+
+def main() -> None:
+    metrics: list[str] = [
+        line("homelab_health_collector_last_run_timestamp_seconds", {"host": HOST}, int(time.time())),
+    ]
+    collect_docker(metrics)
+    collect_archwright(metrics)
+    write_metrics(metrics)
+
+
+if __name__ == "__main__":
+    main()

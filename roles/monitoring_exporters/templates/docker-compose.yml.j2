@@ -7,10 +7,12 @@ services:
       - "--path.procfs=/host/proc"
       - "--path.sysfs=/host/sys"
       - "--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)"
+      - "--collector.textfile.directory=/textfile_collector"
     volumes:
       - /:/host:ro,rslave
+      - {{ node_exporter_textfile_dir }}:/textfile_collector:ro
     ports:
-      - "{{ node_exporter_port }}:9100"
+      - "{{ exporters_bind_host }}:{{ node_exporter_port }}:9100"
     pid: host
     restart: always
     deploy:
@@ -32,7 +34,7 @@ services:
       - /var/lib/docker/:/var/lib/docker:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-      - "{{ cadvisor_port }}:8080"
+      - "{{ exporters_bind_host }}:{{ cadvisor_port }}:8080"
     restart: always
     deploy:
       resources:
@@ -49,11 +51,21 @@ services:
       - "--smartctl.device-exclude={{ smartctl_exporter_device_exclude_regex }}"
       - "--web.listen-address=:9633"
     user: "0:0"
-    privileged: true
+    security_opt:
+      - no-new-privileges:true
+{% if smartctl_exporter_cap_add | default([]) | length > 0 %}
+    cap_add:
+{% for capability in smartctl_exporter_cap_add %}
+      - {{ capability }}
+{% endfor %}
+{% endif %}
     volumes:
       - /run/udev:/run/udev:ro
+{% for mount in smartctl_exporter_device_mounts | default([]) %}
+      - {{ mount }}
+{% endfor %}
     ports:
-      - "{{ smartctl_exporter_port }}:9633"
+      - "{{ exporters_bind_host }}:{{ smartctl_exporter_port }}:9633"
     restart: always
     deploy:
       resources:
@@ -65,17 +77,14 @@ services:
   authentik-postgres-exporter:
     container_name: authentik_postgres_exporter
     image: "quay.io/prometheuscommunity/postgres-exporter:{{ authentik_postgres_exporter_version }}"
-    environment:
-      DATA_SOURCE_URI: "authentik-db:5432/authentik?sslmode=disable"
-      DATA_SOURCE_USER: "authentik"
-      DATA_SOURCE_PASS: "{{ authentik_postgres_password }}"
-      PG_EXPORTER_EXTEND_QUERY_PATH: "/etc/postgres_exporter/authentik-queries.yml"
+    env_file:
+      - authentik-postgres-exporter.env
     volumes:
       - {{ exporters_stack_dir }}/authentik-queries.yml:/etc/postgres_exporter/authentik-queries.yml:ro
     networks:
       - proxy_net
     ports:
-      - "{{ authentik_postgres_exporter_port }}:9187"
+      - "{{ exporters_bind_host }}:{{ authentik_postgres_exporter_port }}:9187"
     restart: always
     deploy:
       resources:
@@ -109,7 +118,7 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     ports:
-      - "{{ nas_ip }}:{{ dozzle_agent_port }}:7007"
+      - "{{ exporters_bind_host }}:{{ dozzle_agent_port }}:7007"
     restart: always
     deploy:
       resources:

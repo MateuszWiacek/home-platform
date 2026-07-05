@@ -1,5 +1,9 @@
 ---
 exporters_stack_dir: "{{ app_stacks_root | default('/opt') }}/monitoring-exporters"
+node_exporter_textfile_dir: "/var/lib/node_exporter/textfile_collector"
+homelab_health_metrics_script: "{{ exporters_stack_dir }}/homelab-health-metrics"
+homelab_health_metrics_interval: "60s"
+monitoring_exporters_host_label: "{{ inventory_hostname }}"
 node_exporter_version: "v1.9.0"
 cadvisor_version: "v0.51.0"
 smartctl_exporter_enabled: false
@@ -13,6 +17,10 @@ authentik_postgres_exporter_port: 9187
 smartctl_exporter_poll_interval: "2m"
 smartctl_exporter_rescan_interval: "15m"
 smartctl_exporter_device_exclude_regex: "^/dev/(loop|ram|fd|dm-|md|zd)"
+smartctl_exporter_cap_add:
+  - SYS_RAWIO
+smartctl_exporter_device_mounts:
+  - "/dev:/dev:ro"
 node_exporter_memory_limit: "64M"
 cadvisor_memory_limit: "128M"
 smartctl_exporter_memory_limit: "128M"
@@ -24,3 +32,8 @@ dozzle_agent_enabled: false
 dozzle_agent_version: "v10.1.2"
 dozzle_agent_port: 7007
 dozzle_agent_memory_limit: "64M"
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+exporters_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

@@ -226,10 +226,16 @@ These are not tracked and require manual checks:
 
 | Service | Reason |
 |---|---|
-| `excalidraw` | Pinned to `latest` - no version to compare |
+| `excalidraw` | Pinned by Docker image digest; upstream does not provide a useful GitHub release tag for this image |
 | `it_tools` | Date-based tags (`2024.10.22-7ca5933`) - no semver releases |
 | `*_postgres_image` | Infrastructure dependency - update on a separate cadence |
 | `*_redis_image` | Infrastructure dependency - update on a separate cadence |
+
+---
+
+## GitHub Action
+
+`.github/workflows/version-check.yml` runs weekly and on demand. It runs `scripts/version-check.py --write` and opens a PR for writable version pins. LinuxServer compound tags, digest-pinned images, PostgreSQL, and Redis stay manual by design.
 
 ---
 

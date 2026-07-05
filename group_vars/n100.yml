@@ -13,7 +13,7 @@ docker_data_dir: "{{ docker_root_dir }}/data"
 # HDD Pool
 media_root_dir: "/mnt/example_storage/media"
 
-# === Traefik compatibility (publication naming & access) ===
+# === Traefik compatibility (production/main naming & access) ===
 # Use exact upstream tags where they exist. They are easier to review than digests
 # while still avoiding floating `latest` updates for core services.
 traefik_version: "v3.6.8"
@@ -45,6 +45,7 @@ jellyfin_version: "10.11.6ubu2404-ls20"
 homepage_version: "v1.10.1"
 
 # === Monitoring exporters ===
+monitoring_exporters_host_label: "nas"
 exporters_stack_dir: "{{ docker_config_dir }}/monitoring-exporters"
 node_exporter_version: "v1.9.0"
 cadvisor_version: "v0.51.0"
@@ -60,7 +61,7 @@ ntfy_data_dir: "{{ docker_data_dir }}/ntfy/data"
 ntfy_cache_dir: "{{ docker_data_dir }}/ntfy/cache"
 
 # === Dozzle agent (NAS side) ===
-dozzle_agent_enabled: "{{ dozzle_enabled | default(false) | bool }}"
+dozzle_agent_enabled: true
 dozzle_agent_version: "v10.1.2"
 
 # === Promtail (log shipper to Loki) ===
@@ -73,6 +74,27 @@ archwright_keep_last: 7
 archwright_removed_jobs:
   - "authentik-media"
 archwright_jobs:
+  - name: "adguard-state"
+    description: "AdGuard Home state backup"
+    enabled: true
+    config_template: "archwright/adguard-state.yml.j2"
+    config_path: "{{ archwright_config_dir }}/adguard-state.yml"
+    backup_path: "{{ archwright_backup_dir }}/adguard-state"
+    on_calendar: "*-*-* 02:05:00"
+  - name: "traefik-state"
+    description: "Traefik ACME state backup"
+    enabled: true
+    config_template: "archwright/traefik-state.yml.j2"
+    config_path: "{{ archwright_config_dir }}/traefik-state.yml"
+    backup_path: "{{ archwright_backup_dir }}/traefik-state"
+    on_calendar: "*-*-* 02:10:00"
+  - name: "jellyfin-state"
+    description: "Jellyfin config and watched-state backup"
+    enabled: true
+    config_template: "archwright/jellyfin-state.yml.j2"
+    config_path: "{{ archwright_config_dir }}/jellyfin-state.yml"
+    backup_path: "{{ archwright_backup_dir }}/jellyfin-state"
+    on_calendar: "*-*-* 02:20:00"
   - name: "vaultwarden"
     description: "Vaultwarden backup"
     enabled: true

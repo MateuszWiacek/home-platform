@@ -19,12 +19,18 @@
       - git
       - htop
       - vim
-      - qemu-guest-agent
       - net-tools
     state: present
+
+- name: "Common | Install QEMU guest agent"
+  ansible.builtin.apt:
+    name: qemu-guest-agent
+    state: present
+  when: qemu_guest_agent_enabled | default(true) | bool
 
 - name: "Common | Ensure QEMU guest agent is running"
   ansible.builtin.systemd:
     name: qemu-guest-agent
     state: started
     enabled: true
+  when: qemu_guest_agent_enabled | default(true) | bool

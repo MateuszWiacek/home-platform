@@ -73,7 +73,7 @@ Leave the rest of the provider fields at their defaults unless you have a reason
 
 ### Wave 1 live examples
 
-These are the services implemented behind ForwardAuth in the reference deployment:
+These are the services currently active behind ForwardAuth on `main`:
 
 | Service | Authentik object type | External host | Must be assigned to proxy outpost |
 |---|---|---|---|

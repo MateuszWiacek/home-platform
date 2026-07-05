@@ -26,3 +26,8 @@ adguard_setup_mode: false
 
 # Keep false by default; set true if you need host access on :8080.
 adguard_publish_http_port: false
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+adguard_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

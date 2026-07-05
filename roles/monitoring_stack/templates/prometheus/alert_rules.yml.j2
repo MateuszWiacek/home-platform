@@ -106,6 +106,33 @@ groups:
           summary: "OOM kill in container {% raw %}{{ $labels.name }}{% endraw %}"
           description: "Container {% raw %}{{ $labels.name }}{% endraw %} was OOM-killed. Check memory limits."
 
+      - alert: ContainerHealthcheckFailed
+        expr: homelab_container_health_healthy == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container healthcheck failed for {% raw %}{{ $labels.container }}{% endraw %}"
+          description: "{% raw %}{{ $labels.container }}{% endraw %} on {% raw %}{{ $labels.host }}{% endraw %} reports Docker health status {% raw %}{{ $labels.status }}{% endraw %}."
+
+      - alert: ArchwrightJobFailed
+        expr: homelab_systemd_unit_last_success{unit=~"archwright-.*\\.service"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Archwright job failed: {% raw %}{{ $labels.unit }}{% endraw %}"
+          description: "{% raw %}{{ $labels.unit }}{% endraw %} on {% raw %}{{ $labels.host }}{% endraw %} last finished with result {% raw %}{{ $labels.result }}{% endraw %}."
+
+      - alert: ArchwrightJobStale
+        expr: time() - homelab_systemd_unit_last_run_timestamp_seconds{unit=~"archwright-.*\\.service"} > 93600
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Archwright job is stale: {% raw %}{{ $labels.unit }}{% endraw %}"
+          description: "{% raw %}{{ $labels.unit }}{% endraw %} on {% raw %}{{ $labels.host }}{% endraw %} has not completed in more than 26 hours."
+
 {% if nas_smartctl_enabled %}
   - name: nas_disk_health
     rules:
@@ -177,13 +204,31 @@ groups:
           description: "Prometheus cannot scrape the Authentik Postgres exporter on the NAS."
 
       - alert: AuthentikTaskQueueHigh
-        expr: sum(authentik_task_queue_queued{job="authentik_postgres", instance="nas"}) > 50000
-        for: 10m
+        expr: sum(authentik_task_queue_queued{job="authentik_postgres", instance="nas"}) > 10000
+        for: 15m
         labels:
           severity: warning
         annotations:
           summary: "Authentik task queue is high"
-          description: "Queued Authentik tasks on the NAS are above 50k."
+          description: "Queued Authentik tasks on the NAS are above 10k."
+
+      - alert: AuthentikTaskTableLarge
+        expr: sum(authentik_task_table_total_tasks{job="authentik_postgres", instance="nas"}) > 100000
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Authentik task table is large"
+          description: "Authentik task table on the NAS has more than 100k rows."
+
+      - alert: AuthentikQueuedTaskAgeHigh
+        expr: max(authentik_task_table_oldest_task_age_seconds{job="authentik_postgres", instance="nas", state="queued"}) > 3600
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Old queued Authentik tasks detected"
+          description: "The oldest queued Authentik task on the NAS is older than 1 hour."
 
       - alert: AuthentikExpiredChannelMessagesHigh
         expr: authentik_channel_messages_expired_messages{job="authentik_postgres", instance="nas"} > 10000

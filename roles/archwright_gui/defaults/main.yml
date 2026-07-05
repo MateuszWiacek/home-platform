@@ -1,0 +1,59 @@
+---
+archwright_gui_enabled: false
+
+archwright_gui_local_source_dir: >-
+  {{ lookup('env', 'HOME') }}/src/archwright
+archwright_gui_stack_dir: "{{ docker_config_dir }}/archwright-gui"
+archwright_gui_source_dir: "{{ archwright_gui_stack_dir }}/src"
+archwright_gui_ssh_dir: "{{ archwright_gui_stack_dir }}/ssh"
+archwright_gui_inventory_path: "{{ archwright_gui_stack_dir }}/inventory.yaml"
+archwright_gui_known_hosts_path: "{{ archwright_gui_ssh_dir }}/known_hosts"
+archwright_gui_private_key_path: "{{ archwright_gui_ssh_dir }}/id_ed25519"
+
+archwright_gui_image: "archwright:gui-local"
+archwright_gui_container_name: "archwright-gui"
+archwright_gui_service_port: 8471
+archwright_gui_memory_limit: "512M"
+archwright_gui_domain: "backups.{{ domain_name }}"
+archwright_gui_auth_mode: "forwardauth"
+
+archwright_gui_container_uid: 10001
+archwright_gui_container_gid: 10001
+archwright_gui_ssh_private_key: >-
+  {{ vault_archwright_gui_ssh_private_key | default('') }}
+
+archwright_gui_nas_user: "{{ ansible_user | default('admin') }}"
+archwright_gui_nas_host: "{{ nas_ip }}"
+archwright_gui_nas_port: 22
+archwright_gui_nas_config_dir: >-
+  {{ archwright_config_dir | default('/etc/archwright') }}
+archwright_gui_nas_wrapper: "{{ archwright_gui_nas_config_dir }}/archwright"
+archwright_gui_nas_command: "sudo -n {{ archwright_gui_nas_wrapper }}"
+
+archwright_gui_ryzen_user: "backup"
+archwright_gui_ryzen_host: "{{ ryzen_ip }}"
+archwright_gui_ryzen_port: 22
+archwright_gui_ryzen_config_dir: "/opt/backups/archwright"
+archwright_gui_ryzen_command: "{{ archwright_gui_ryzen_config_dir }}/archwright"
+
+archwright_gui_nodes:
+  - id: "nas"
+    executor: "ssh"
+    host: "{{ archwright_gui_nas_host }}"
+    user: "{{ archwright_gui_nas_user }}"
+    port: "{{ archwright_gui_nas_port }}"
+    config_dir: "{{ archwright_gui_nas_config_dir }}"
+    command: "{{ archwright_gui_nas_command }}"
+  - id: "ryzen"
+    executor: "ssh"
+    host: "{{ archwright_gui_ryzen_host }}"
+    user: "{{ archwright_gui_ryzen_user }}"
+    port: "{{ archwright_gui_ryzen_port }}"
+    config_dir: "{{ archwright_gui_ryzen_config_dir }}"
+    command: "{{ archwright_gui_ryzen_command }}"
+
+archwright_gui_sudoers_enabled: true
+archwright_gui_visudo_path: "/usr/sbin/visudo"
+archwright_gui_sudoers_rules:
+  - user: "{{ archwright_gui_nas_user }}"
+    command: "{{ archwright_gui_nas_wrapper }} *"

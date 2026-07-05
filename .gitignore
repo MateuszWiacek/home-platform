@@ -1,6 +1,8 @@
 secrets.yml
 *.DS_Store
 .DS_Store
+.claude/
+.pytest_cache/
 __pycache__/
 *.py[cod]
-.pytest_cache/
+*.zip

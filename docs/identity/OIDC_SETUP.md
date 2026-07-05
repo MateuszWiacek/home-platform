@@ -13,9 +13,7 @@ Native OIDC is the right fit when:
 - You want app-level identity (per-user sessions, user mapping, permissions)
 - The service has mobile apps or API clients that would break with proxy-level auth
 
-Current OIDC services in the reference deployment: Immich and Paperless-ngx.
-
-Other candidates are tracked in [`AUTH_ROLLOUT.md`](AUTH_ROLLOUT.md). Keep this document focused on the pattern and the services that are already wired.
+Target OIDC services: Immich, Paperless-ngx, Mealie, Audiobookshelf, Linkwarden, Proxmox.
 
 See [`AUTH_MODEL.md`](AUTH_MODEL.md) for the full per-service decision matrix.
 
@@ -149,12 +147,15 @@ Then confirm the generated env/config on disk contains the expected issuer URL a
 
 ## Redirect URI reference
 
-Record redirect URIs here only after a service is actually wired. Byte-for-byte accuracy matters - a trailing slash mismatch will break the flow.
+Record every redirect URI here as services are onboarded. Byte-for-byte accuracy matters - a trailing slash mismatch will break the flow.
 
 | Service | Redirect URI | Status |
 |---|---|---|
-| Immich | `https://photos.homelab.local/auth/login` | Implemented in the reference deployment |
-| Paperless-ngx | `https://docs.homelab.local/accounts/oidc/authentik/login/callback/` | Implemented in the reference deployment |
+| Immich | `https://photos.homelab.local/auth/login` | Active on `main` |
+| Paperless-ngx | `https://docs.homelab.local/accounts/oidc/authentik/login/callback/` | Active on `main` |
+| Mealie | TBD | Planned |
+| Audiobookshelf | TBD | Planned |
+| Linkwarden | TBD | Planned |
 | Proxmox | `https://pve.homelab.local/` | See [PROXMOX_OIDC](../setup/PROXMOX_OIDC.md) |
 
 ---

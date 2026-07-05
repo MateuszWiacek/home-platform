@@ -1,0 +1,58 @@
+---
+name: Version Check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 7 * * 1"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  version-check:
+    name: "Check pinned service versions"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install PyYAML
+
+      - name: Update writable version pins
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          ./scripts/version-check.py --write
+          status=$?
+          set -e
+
+          # version-check exits 1 when updates/drift exist. That is expected here:
+          # the next step turns any written changes into a reviewable PR.
+          if [ "$status" -gt 1 ]; then
+            exit "$status"
+          fi
+
+      - name: Create version update PR
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: automation/version-updates
+          delete-branch: true
+          title: "chore: update pinned service versions"
+          commit-message: "chore: update pinned service versions"
+          body: |
+            Automated version-check run.
+
+            Review release notes before merging, especially for Authentik,
+            Immich, Traefik, Grafana, and database-backed services.

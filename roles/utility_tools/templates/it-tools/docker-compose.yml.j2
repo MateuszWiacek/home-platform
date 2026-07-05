@@ -4,7 +4,7 @@ services:
     container_name: it_tools
     restart: unless-stopped
     ports:
-      - "{{ it_tools_service_port }}:80"
+      - "{{ it_tools_bind_host }}:{{ it_tools_service_port }}:80"
     volumes:
       - /etc/localtime:/etc/localtime:ro
     deploy:

@@ -13,6 +13,13 @@ nas_source_backup: "/mnt/example_apps/backup"
 nas_source_photos: "/mnt/example_storage/photos/library"
 nas_source_docs: "/mnt/example_storage/documents"
 nas_source_media: "/mnt/example_storage/media"
+nas_media_child_mounts:
+  - { src: "/mnt/example_storage/media/audiobooks", path: "{{ mnt_media }}/audiobooks" }
+  - { src: "/mnt/example_storage/media/ebooks", path: "{{ mnt_media }}/ebooks" }
+  - { src: "/mnt/example_storage/media/music", path: "{{ mnt_media }}/music" }
+  - { src: "/mnt/example_storage/media/movies", path: "{{ mnt_media }}/movies" }
+  - { src: "/mnt/example_storage/media/series", path: "{{ mnt_media }}/series" }
+  - { src: "/mnt/example_storage/media/sync", path: "{{ mnt_media }}/sync" }
 
 # === Mount Points (Logical Paths on Ryzen VM) ===
 mnt_fast_config: "/mnt/nas_fast_config"
@@ -34,13 +41,12 @@ navidrome_version: "0.60.3"
 audiobookshelf_version: "2.33.0"
 calibre_web_version: "0.6.26-ls373"
 siyuan_version: "v3.6.0"
-# Intentional trade-off: upstream tags are still messy here, so keep `latest`
-# until there is a stable, verifiable tag mapping for the image we actually run.
-excalidraw_version: "latest"
+excalidraw_image: "excalidraw/excalidraw@sha256:20ffa04668e19616bb0c1b3632849e5cd96e0bc7a1336b73d9d072667f2c2854"
 mealie_version: "v3.12.0"
 syncthing_version: "v2.0.15-ls211"
 linkwarden_version: "v2.13.5"
 linkwarden_postgres_image: "docker.io/library/postgres:16-alpine"
+monitoring_exporters_host_label: "ryzen"
 node_exporter_version: "v1.9.0"
 cadvisor_version: "v0.51.0"
 prometheus_version: "v3.3.1"
@@ -63,8 +69,8 @@ paperless_redis_image: "docker.io/library/redis:7-alpine"
 archwright_config_dir: "/opt/backups/archwright"
 archwright_backup_dir: "{{ mnt_backup }}/archwright"
 archwright_keep_last: 28
-archwright_run_user: "backupuser"
-archwright_run_group: "backupuser"
+archwright_run_user: "backup"
+archwright_run_group: "backup"
 archwright_jobs:
   - name: "immich-db"
     description: "Immich PostgreSQL backup"
@@ -74,16 +80,58 @@ archwright_jobs:
     backup_path: "{{ archwright_backup_dir }}/immich-db"
     on_calendar: "*-*-* 03:00:00"
   - name: "paperless-db"
-    description: "Paperless PostgreSQL backup"
+    description: "Paperless PostgreSQL and app-state backup"
     enabled: true
     config_template: "archwright/paperless-db.yml.j2"
     config_path: "{{ archwright_config_dir }}/paperless-db.yml"
     backup_path: "{{ archwright_backup_dir }}/paperless-db"
     on_calendar: "*-*-* 03:10:00"
   - name: "linkwarden-db"
-    description: "Linkwarden PostgreSQL backup"
+    description: "Linkwarden PostgreSQL and archive-data backup"
     enabled: true
     config_template: "archwright/linkwarden-db.yml.j2"
     config_path: "{{ archwright_config_dir }}/linkwarden-db.yml"
     backup_path: "{{ archwright_backup_dir }}/linkwarden-db"
     on_calendar: "*-*-* 03:20:00"
+  - name: "mealie-state"
+    description: "Mealie SQLite/app-data backup"
+    enabled: true
+    config_template: "archwright/mealie-state.yml.j2"
+    config_path: "{{ archwright_config_dir }}/mealie-state.yml"
+    backup_path: "{{ archwright_backup_dir }}/mealie-state"
+    on_calendar: "*-*-* 03:30:00"
+  - name: "siyuan-state"
+    description: "SiYuan workspace backup"
+    enabled: true
+    config_template: "archwright/siyuan-state.yml.j2"
+    config_path: "{{ archwright_config_dir }}/siyuan-state.yml"
+    backup_path: "{{ archwright_backup_dir }}/siyuan-state"
+    on_calendar: "*-*-* 03:40:00"
+  - name: "navidrome-state"
+    description: "Navidrome database/config backup"
+    enabled: true
+    config_template: "archwright/navidrome-state.yml.j2"
+    config_path: "{{ archwright_config_dir }}/navidrome-state.yml"
+    backup_path: "{{ archwright_backup_dir }}/navidrome-state"
+    on_calendar: "*-*-* 03:50:00"
+  - name: "audiobookshelf-state"
+    description: "Audiobookshelf config/metadata backup"
+    enabled: true
+    config_template: "archwright/audiobookshelf-state.yml.j2"
+    config_path: "{{ archwright_config_dir }}/audiobookshelf-state.yml"
+    backup_path: "{{ archwright_backup_dir }}/audiobookshelf-state"
+    on_calendar: "*-*-* 04:00:00"
+  - name: "calibre-web-state"
+    description: "Calibre-Web config backup"
+    enabled: true
+    config_template: "archwright/calibre-web-state.yml.j2"
+    config_path: "{{ archwright_config_dir }}/calibre-web-state.yml"
+    backup_path: "{{ archwright_backup_dir }}/calibre-web-state"
+    on_calendar: "*-*-* 04:10:00"
+  - name: "syncthing-state"
+    description: "Syncthing config and identity backup"
+    enabled: true
+    config_template: "archwright/syncthing-state.yml.j2"
+    config_path: "{{ archwright_config_dir }}/syncthing-state.yml"
+    backup_path: "{{ archwright_backup_dir }}/syncthing-state"
+    on_calendar: "*-*-* 04:20:00"

@@ -1,6 +1,6 @@
 # Non-Technical Recovery
 
-If something stopped working and the maintainer is not around, try these steps in order.
+If something stopped working and Mateusz is not around, try these steps in order.
 No terminal needed.
 
 ---
@@ -34,4 +34,4 @@ The NAS (small box, always on) probably needs a restart:
 
 ## Step 4: Still broken
 
-Contact the maintainer. Take a photo of any error message visible on screen - it helps a lot.
+Call/message Mateusz. Take a photo of any error message visible on screen - it helps a lot.

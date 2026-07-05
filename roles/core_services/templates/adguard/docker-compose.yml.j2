@@ -21,10 +21,10 @@ services:
       - "53:53/tcp"
       - "53:53/udp"
 {% if adguard_setup_mode %}
-      - "{{ adguard_setup_port }}:3000/tcp"
+      - "{{ adguard_bind_host }}:{{ adguard_setup_port }}:3000/tcp"
 {% endif %}
 {% if adguard_publish_http_port %}
-      - "{{ adguard_admin_port }}:80/tcp"
+      - "{{ adguard_bind_host }}:{{ adguard_admin_port }}:80/tcp"
 {% endif %}
 
     # Traefik Configuration Labels

@@ -28,9 +28,12 @@ Data that takes real effort to recreate but is not irreplaceable.
 |---|---|---|
 | Immich PostgreSQL | Ryzen NVMe | Photo metadata, albums, face recognition data. Rebuildable from raw files, but reindexing and re-tagging takes time. |
 | Paperless PostgreSQL | Ryzen NVMe | Document metadata, tags, correspondents. Rebuildable from raw files via re-OCR, but manual tagging is lost. |
-| Linkwarden PostgreSQL | Ryzen NVMe | Bookmark metadata, tags, and collections. Archived page content still lives outside the DB. |
+| Linkwarden PostgreSQL + archived data | Ryzen NVMe | Bookmark metadata, tags, collections, page archives, and screenshots. Rebuildable only by re-crawling saved links. |
 | Authentik PostgreSQL | NAS SSD pool | Users, groups, policies, provider configs. Rebuildable from scratch, but reconfiguring SSO across all services is a full day of work. |
 | Authentik assets | NAS SSD pool | Custom branding, icons, templates. Low effort to recreate, but annoying. |
+| AdGuard Home state | NAS SSD pool | Local DNS rewrites, resolver config, stats, and query state. Rebuildable, but annoying and easy to misconfigure. |
+| SiYuan workspace | Ryzen NVMe | Notes and assets. Treat as important if actively used. |
+| Mealie data | Ryzen NVMe | Recipes and meal planning state. Small and worth backing up. |
 
 ### Tier 3 - Replaceable
 
@@ -40,8 +43,10 @@ Data that can be recreated from code, config, or re-setup with minimal effort.
 |---|---|---|
 | App configurations | Ansible roles + group_vars | Redeploy from repo |
 | Container images | Public registries | `docker compose pull` |
-| Navidrome / Audiobookshelf / Calibre-Web DBs | Local app state | Re-scan media libraries |
-| SiYuan / Excalidraw / Mealie / Linkwarden archive data | App-level storage | Accept loss or restore from manual export if available |
+| Navidrome / Audiobookshelf / Calibre-Web DBs | Local app state + archwright app-state backups | Re-scan media libraries if the app-state backup is unavailable |
+| Syncthing identity/config | Local app state + archwright app-state backups | Restore device identity/config or reconnect devices manually |
+| Jellyfin metadata | NAS SSD pool + archwright app-state backups | Re-scan media library if the app-state backup is unavailable |
+| Traefik ACME state | NAS SSD pool + archwright app-state backups | Restore `acme.json` or re-issue certificates |
 | AI model caches (Immich ML) | Public model repos | Re-downloaded on first run |
 
 ---
@@ -50,12 +55,21 @@ Data that can be recreated from code, config, or re-setup with minimal effort.
 
 | Data | Method | Schedule | Retention | Destination |
 |---|---|---|---|---|
+| AdGuard Home state | archwright (file collection) | Daily 02:05 | 7 archives | NAS SSD pool |
+| Traefik ACME state | archwright (file collection) | Daily 02:10 | 7 archives | NAS SSD pool |
+| Jellyfin config + watched state | archwright (file collection) | Daily 02:20 | 7 archives | NAS SSD pool |
 | Vaultwarden SQLite + files | archwright (SQLite `.backup` + file collection) | Daily 02:30 | 7 archives | NAS SSD pool |
 | Authentik assets | archwright (file collection) | Daily 02:40 | 7 archives | NAS SSD pool |
 | Authentik PostgreSQL | archwright (`docker_postgres`) | Daily 02:50 | 7 archives | NAS SSD pool |
 | Immich PostgreSQL | archwright (`docker_postgres`) | Daily 03:00 | 28 archives | NAS SSD backup dataset |
-| Paperless PostgreSQL | archwright (`docker_postgres`) | Daily 03:10 | 28 archives | NAS SSD backup dataset |
-| Linkwarden PostgreSQL | archwright (`docker_postgres`) | Daily 03:20 | 28 archives | NAS SSD backup dataset |
+| Paperless PostgreSQL + app data | archwright (`docker_postgres` + file collection) | Daily 03:10 | 28 archives | NAS SSD backup dataset |
+| Linkwarden PostgreSQL + archived data | archwright (`docker_postgres` + file collection) | Daily 03:20 | 28 archives | NAS SSD backup dataset |
+| Mealie app data | archwright (file collection) | Daily 03:30 | 28 archives | NAS SSD backup dataset |
+| SiYuan workspace | archwright (file collection) | Daily 03:40 | 28 archives | NAS SSD backup dataset |
+| Navidrome state | archwright (file collection) | Daily 03:50 | 28 archives | NAS SSD backup dataset |
+| Audiobookshelf config + metadata | archwright (file collection) | Daily 04:00 | 28 archives | NAS SSD backup dataset |
+| Calibre-Web config | archwright (file collection) | Daily 04:10 | 28 archives | NAS SSD backup dataset |
+| Syncthing config + identity | archwright (file collection) | Daily 04:20 | 28 archives | NAS SSD backup dataset |
 | Photos library | ZFS snapshots (TrueNAS) | TrueNAS snapshot schedule | Per TrueNAS config | Same pool (local snapshots) |
 | Documents archive | ZFS snapshots (TrueNAS) | TrueNAS snapshot schedule | Per TrueNAS config | Same pool (local snapshots) |
 | App configs | ZFS snapshots (TrueNAS) | TrueNAS snapshot schedule | Per TrueNAS config | Same pool (local snapshots) |
@@ -66,12 +80,15 @@ One backup tool, deployed on both nodes:
 
 **archwright** (Python, config-driven) - file collection + SQLite dumps + Docker PostgreSQL dumps:
 - Vaultwarden: SQLite `.backup` (hot, safe on live DB) + config files + attachments
+- AdGuard, Traefik, Jellyfin: small NAS-side app state that is annoying to rebuild
 - Authentik assets: branding, icons, custom templates
 - Authentik PostgreSQL: local `docker exec pg_dump` on NAS
 - Immich, Paperless, Linkwarden PostgreSQL: local `docker exec pg_dump` on Ryzen
+- Paperless app data and Linkwarden archived data: file collection alongside DB dumps
+- Mealie, SiYuan, Navidrome, Audiobookshelf, Calibre-Web, Syncthing: Ryzen-side app state
 - Runs on both nodes via per-job systemd timers
 - Manual CLI usage goes through the host-local wrapper in `archwright_config_dir`
-- NAS manual runs should use `sudo`; Ryzen manual runs should use `sudo -u backupuser` because the NFS backup mount is owned by that runtime user
+- NAS manual runs should use `sudo`; Ryzen manual runs should use `sudo -u backup` because the NFS backup mount is owned by that runtime user
 - Atomic ZIP archives with rotation (keep_last 7 on NAS, 28 on Ryzen)
 - Config files: `roles/archwright/templates/archwright/`
 
@@ -83,9 +100,12 @@ Being explicit about gaps is more useful than pretending they don't exist.
 
 | Data | Why not | Risk |
 |---|---|---|
-| SiYuan notes | No export automation | Medium if actively used. Consider periodic manual export. |
-| Mealie / Excalidraw / Linkwarden archive data | No backup script | Low to medium. Accept loss or add manual exports. |
-| Navidrome / Audiobookshelf / Calibre-Web DBs | Replaceable via library re-scan | Low. Media files are the source of truth, not the DB. |
+| Immich photo originals | Too large for ZIP archives; protected by ZFS snapshots, cold storage, and cloud | High if the non-archwright copies are stale. Keep 3-2-1 current. |
+| Paperless document archive | Too large for ZIP archives; protected by ZFS snapshots, cold storage, and cloud | High if the non-archwright copies are stale. Keep 3-2-1 current. |
+| Media libraries | Source data lives on NAS media datasets, not in app containers | Low for app rebuilds, high only if NAS/off-site copies fail. |
+| Immich thumbnails, ML model cache, Redis caches | Regenerable cache data | Low. Rebuild/re-download after restore. |
+| Portainer, Dozzle, monitoring time-series, Excalidraw, utility tools | Low-value or redeployable state | Low. Add dedicated jobs only if these become important. |
+| Ntfy cache/history | Mostly transient notification data | Low. Config is generated from Ansible. |
 
 ---
 
@@ -119,6 +139,7 @@ Not an SLA - just honest expectations for how much data I can lose and how long 
 | Tier 1 - photos/docs | Up to 24h (ZFS snapshot interval) | Hours (ZFS rollback, cold storage, or cloud restore) | 3-2-1 covered: NAS + cold storage + cloud |
 | Tier 1 - Vaultwarden | Up to 24h (daily archwright backup) | Minutes (archwright restore) | Automated daily, plus cold storage + cloud |
 | Tier 2 - databases | Up to 24h (daily archwright backup) | 30-60 min per DB (restore + verify) | Straightforward `pg_restore` from `docker_postgres` dumps |
+| Tier 2/3 - app state | Up to 24h (daily archwright backup) | Minutes to hours | Restore small app-state ZIPs or rebuild from raw libraries |
 | Tier 3 - app configs | Zero (in git) | Minutes to hours (ansible deploy) | Full redeploy from repo |
 | Tier 3 - replaceable DBs | Full loss acceptable | Varies (re-scan, re-index) | Media files are the source of truth |
 
@@ -134,22 +155,22 @@ This example uses Linkwarden because that restore path has already been tested. 
 
 ```bash
 # List available archives (example: Linkwarden on Ryzen)
-sudo -u backupuser /opt/backups/archwright/archwright list --config /opt/backups/archwright/linkwarden-db.yml
+sudo -u backup /opt/backups/archwright/archwright list --config /opt/backups/archwright/linkwarden-db.yml
 
 # Preview what archwright would extract
-sudo -u backupuser /opt/backups/archwright/archwright restore \
+sudo -u backup /opt/backups/archwright/archwright restore \
   --config /opt/backups/archwright/linkwarden-db.yml \
   --archive /mnt/nas_backup/archwright/linkwarden-db/<archive>.zip \
   --dry-run
 
 # Restore config files
-sudo -u backupuser /opt/backups/archwright/archwright restore \
+sudo -u backup /opt/backups/archwright/archwright restore \
   --config /opt/backups/archwright/linkwarden-db.yml \
   --archive /mnt/nas_backup/archwright/linkwarden-db/<archive>.zip \
   --overwrite
 
 # Extract the dump from the archive
-sudo -u backupuser unzip /mnt/nas_backup/archwright/linkwarden-db/<archive>.zip \
+sudo -u backup unzip /mnt/nas_backup/archwright/linkwarden-db/<archive>.zip \
   "databases/*" -d /tmp/db-restore/
 
 # Restore into the container
@@ -229,5 +250,7 @@ A backup that has never been tested is not a backup. It's a hope.
 - [x] Automate Vaultwarden backup (archwright - SQLite + files, daily)
 - [x] Automate Authentik assets backup (archwright - file collection, daily)
 - [x] Move PostgreSQL backups into archwright (`docker_postgres`) on NAS and Ryzen
+- [x] Add small app-state backups for AdGuard, Traefik, Jellyfin, Paperless, Linkwarden, Mealie, SiYuan, Navidrome, Audiobookshelf, Calibre-Web, and Syncthing
 - [ ] Schedule periodic restore tests (at least once per quarter)
-- [ ] Evaluate whether SiYuan/Mealie/Linkwarden archive data needs backup automation based on actual usage
+- [ ] Add archwright web UI/control-plane deployment after the GUI branch is cleaned up and tested
+- [ ] Decide whether Ntfy, Portainer, monitoring state, or Stirling PDF config need archwright jobs

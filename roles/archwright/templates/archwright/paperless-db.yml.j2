@@ -12,6 +12,11 @@ structure:
     env:
       source_dir: "{{ paperless_stack_dir }}"
       include: ".env"
+    app_data:
+      source_dir: "{{ paperless_data_dir }}"
+      include: "*"
+      pre_command: "docker stop paperless_webserver"
+      post_command: "docker start paperless_webserver"
 
 databases:
   paperless_db:

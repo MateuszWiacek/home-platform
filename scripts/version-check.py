@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Version Drift Checker for Home Platform
-=========================================
+=======================================
 Compares pinned service versions in group_vars against latest
 GitHub releases. Detects coupled version drift and optionally
 sends a summary to ntfy.

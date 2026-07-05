@@ -9,6 +9,50 @@
     state: directory
     mode: '0755'
 
+- name: "Monitoring Exporters | Ensure node-exporter textfile directory exists"
+  ansible.builtin.file:
+    path: "{{ node_exporter_textfile_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: "Monitoring Exporters | Deploy homelab health metrics collector"
+  ansible.builtin.template:
+    src: "homelab-health-metrics.py.j2"
+    dest: "{{ homelab_health_metrics_script }}"
+    owner: root
+    group: root
+    mode: '0755'
+
+- name: "Monitoring Exporters | Deploy homelab health metrics service"
+  ansible.builtin.template:
+    src: "homelab-health-metrics.service.j2"
+    dest: "/etc/systemd/system/homelab-health-metrics.service"
+    owner: root
+    group: root
+    mode: '0644'
+  register: _homelab_health_metrics_service
+
+- name: "Monitoring Exporters | Deploy homelab health metrics timer"
+  ansible.builtin.template:
+    src: "homelab-health-metrics.timer.j2"
+    dest: "/etc/systemd/system/homelab-health-metrics.timer"
+    owner: root
+    group: root
+    mode: '0644'
+  register: _homelab_health_metrics_timer
+
+- name: "Monitoring Exporters | Enable homelab health metrics timer"
+  ansible.builtin.systemd:
+    name: homelab-health-metrics.timer
+    enabled: true
+    state: started
+    daemon_reload: "{{ _homelab_health_metrics_service.changed or _homelab_health_metrics_timer.changed }}"
+
+- name: "Monitoring Exporters | Run homelab health metrics once"
+  ansible.builtin.command:
+    cmd: "{{ homelab_health_metrics_script }}"
+  changed_when: false
+
 - name: "Monitoring Exporters | Deploy docker-compose file"
   ansible.builtin.template:
     src: "docker-compose.yml.j2"
@@ -35,6 +79,21 @@
     dest: "{{ exporters_stack_dir }}/authentik-queries.yml"
     mode: '0644'
   when: authentik_postgres_exporter_enabled | default(false) | bool
+  notify: Restart monitoring exporters
+
+- name: "Monitoring Exporters | Deploy Authentik Postgres exporter env"
+  ansible.builtin.template:
+    src: "authentik-postgres-exporter.env.j2"
+    dest: "{{ exporters_stack_dir }}/authentik-postgres-exporter.env"
+    mode: '0600'
+  when: authentik_postgres_exporter_enabled | default(false) | bool
+  notify: Restart monitoring exporters
+
+- name: "Monitoring Exporters | Remove Authentik Postgres exporter env when disabled"
+  ansible.builtin.file:
+    path: "{{ exporters_stack_dir }}/authentik-postgres-exporter.env"
+    state: absent
+  when: not (authentik_postgres_exporter_enabled | default(false) | bool)
   notify: Restart monitoring exporters
 
 - name: "Monitoring Exporters | Start containers"

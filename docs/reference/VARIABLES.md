@@ -43,7 +43,6 @@ Full backup strategy, tiers, restore procedures, and recovery targets: [`BACKUP_
 
 Backup-related variables:
 - `archwright_config_dir`, `archwright_cli_path`, `archwright_backup_dir`, `archwright_keep_last` in `roles/archwright/defaults/main.yml` (override in `group_vars/n100.yml` and `group_vars/docker_nodes.yml` per host)
-- `archwright_source_mode`, `archwright_source_archive_url`, `archwright_local_source_dir` in `roles/archwright/defaults/main.yml` control whether archwright is pulled from its public repo or copied from a local checkout
 - `archwright_jobs` defined per host in `group_vars/n100.yml` and `group_vars/docker_nodes.yml` (defaults to empty list in `roles/archwright/defaults/main.yml`)
 - `archwright_run_user`, `archwright_run_group` in `group_vars/docker_nodes.yml` for NFS-safe writes into the backup dataset
 - `nas_source_backup`, `mnt_backup` in `group_vars/docker_nodes.yml` for the Ryzen-side NFS mount into the NAS backup dataset
@@ -56,9 +55,8 @@ Monitoring is controlled by `monitoring_enabled` in `group_vars/all.yml`. It is 
 
 Feature toggle and shared endpoints:
 - `monitoring_enabled` in `group_vars/all.yml`
-- `dozzle_enabled` in `group_vars/all.yml`
 - `grafana_domain`, `grafana_service_port`, `prometheus_service_port`, `alertmanager_service_port` in `group_vars/all.yml`
-- `grafana_auth_mode`, `dozzle_auth_mode` in `group_vars/all.yml`
+- `grafana_auth_mode` in `group_vars/all.yml`
 
 Image tags:
 - `node_exporter_version`, `cadvisor_version` in `group_vars/n100.yml`

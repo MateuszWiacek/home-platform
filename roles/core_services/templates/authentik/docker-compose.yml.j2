@@ -86,7 +86,7 @@ services:
       AUTHENTIK_REDIS__HOST: redis
       AUTHENTIK_POSTGRESQL__HOST: postgresql
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - /var/run/docker.sock:/var/run/docker.sock:ro
       - {{ docker_config_dir }}/authentik/media:/media
       - {{ docker_config_dir }}/authentik/custom-templates:/templates
     env_file:

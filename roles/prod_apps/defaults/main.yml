@@ -1,8 +1,7 @@
 ---
 # Production app image/version defaults.
-# Override in group_vars/docker_nodes.yml for pinned production versions.
 immich_version: "v2.5.6"
-paperless_version: "latest"
+paperless_version: "2.20.7"
 
 immich_postgres_image: "tensorchord/pgvecto-rs:pg14-v0.2.0"
 immich_redis_image: "redis:6.2-alpine"
@@ -19,4 +18,13 @@ paperless_stack_dir: "{{ app_stacks_root }}/paperless"
 paperless_db_dir: "{{ paperless_stack_dir }}/db"
 paperless_redis_dir: "{{ paperless_stack_dir }}/redis"
 paperless_data_dir: "{{ paperless_stack_dir }}/data"
+paperless_memory_limit: "4096M"
+paperless_task_workers: 1
+paperless_threads_per_worker: 1
 backups_root_dir: "{{ app_stacks_root }}/backups"
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+immich_bind_host: "{{ ansible_host | default(inventory_hostname) }}"
+paperless_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

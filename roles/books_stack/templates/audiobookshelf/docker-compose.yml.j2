@@ -4,7 +4,7 @@ services:
     container_name: audiobookshelf
     restart: unless-stopped
     ports:
-      - "{{ audiobookshelf_service_port }}:80"
+      - "{{ audiobookshelf_bind_host }}:{{ audiobookshelf_service_port }}:80"
     environment:
       - TZ={{ timezone }}
     volumes:

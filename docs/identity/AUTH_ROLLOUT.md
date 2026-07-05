@@ -10,7 +10,7 @@ Implementation status and rollout plan. For the target model, see [`AUTH_MODEL.m
 - Auth mode values are configured in `group_vars/all.yml`.
 - Defaults remain `local` for every service until migration is done deliberately.
 
-### What is implemented in the reference deployment
+### What's live on `main`
 
 | Service | Auth mode | Status |
 |---|---|---|
@@ -22,7 +22,7 @@ Implementation status and rollout plan. For the target model, see [`AUTH_MODEL.m
 | Stirling-PDF | ForwardAuth | Active |
 | Grafana | ForwardAuth | Implemented when `monitoring_enabled: true` |
 
-### Native OIDC implemented in the reference deployment
+### Native OIDC live on `main`
 
 | Service | Auth mode | Status |
 |---|---|---|
@@ -67,13 +67,13 @@ Not yet wired: Mealie, Linkwarden, Navidrome, Audiobookshelf, Calibre-Web, SiYua
 - Immich
 - Paperless-ngx
 
-### Wave 3 - Native OIDC candidates
+### Wave 3 - Native OIDC for remaining candidates
 
 - Mealie
 - Audiobookshelf
 - Linkwarden
 
-### Keep local for now
+### Leave for later
 
 - Navidrome - Subsonic clients complicate proxy auth
 - Calibre-Web - lower value than other OIDC targets
@@ -98,7 +98,7 @@ Existing native OIDC app toggles now respect auth mode in:
 
 ### Phase 2 - Finish ForwardAuth for browser-only tools (completed)
 
-All Wave 1 services are implemented in the reference deployment.
+All Wave 1 services are active on `main`.
 
 ### Phase 3 - Extend native OIDC where it delivers the most value
 

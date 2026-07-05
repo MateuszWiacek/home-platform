@@ -1,0 +1,11 @@
+# Traefik backup - ACME account and issued certificate state.
+
+backup_name: "traefik_state"
+target_base_dir: "{{ archwright_backup_dir }}/traefik-state"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  traefik:
+    acme:
+      source_dir: "{{ docker_data_dir }}/traefik"
+      include: "acme.json"

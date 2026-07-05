@@ -1,4 +1,9 @@
 ---
-excalidraw_version: "latest"
+excalidraw_image: "excalidraw/excalidraw@sha256:20ffa04668e19616bb0c1b3632849e5cd96e0bc7a1336b73d9d072667f2c2854"
 excalidraw_stack_dir: "{{ app_stacks_root | default('/opt') }}/excalidraw"
 excalidraw_memory_limit: "128M"
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+excalidraw_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

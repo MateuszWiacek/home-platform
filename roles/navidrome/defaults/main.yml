@@ -1,8 +1,13 @@
 ---
-navidrome_version: "latest"
+navidrome_version: "0.60.3"
 navidrome_stack_dir: "{{ app_stacks_root | default('/opt') }}/navidrome"
 navidrome_data_dir: "{{ navidrome_stack_dir }}/data"
 
 # Music library is served from the existing NAS media NFS mount.
 navidrome_music_dir: "{{ mnt_media }}/music"
 navidrome_memory_limit: "512M"
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+navidrome_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

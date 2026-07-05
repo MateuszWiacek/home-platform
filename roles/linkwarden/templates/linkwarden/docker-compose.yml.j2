@@ -7,7 +7,7 @@ services:
       linkwarden_db:
         condition: service_healthy
     ports:
-      - "{{ linkwarden_service_port }}:3000"
+      - "{{ linkwarden_bind_host }}:{{ linkwarden_service_port }}:3000"
     env_file:
       - .env
     environment:

@@ -413,3 +413,112 @@ Homepage widgets for Immich and Paperless use direct Ryzen IP (`http://10.0.0.30
 This is intentional. Homepage runs on the NAS and queries widget APIs server-side. Routing through the public domain would mean NAS -> AdGuard DNS -> Traefik -> Ryzen, adding an unnecessary hop and a dependency on Traefik being healthy just to display widget data.
 
 Direct IP is faster, simpler, and survives a Traefik outage.
+
+---
+
+## NFS media subdirectories look empty on Docker nodes
+
+**Symptom:** Files are visible on the NAS, but services on a Docker node see empty directories. Example:
+
+```bash
+# NAS
+ls /mnt/example_storage/media/audiobooks
+
+# Docker node
+ls /mnt/nas_media/audiobooks
+```
+
+The NAS shows books, but the Docker node shows an empty directory. Audiobookshelf then imports nothing even after a rescan.
+
+**Cause:** The media folders are separate ZFS child datasets:
+
+```text
+storage_1/media
+storage_1/media/audiobooks
+storage_1/media/ebooks
+storage_1/media/music
+storage_1/media/movies
+storage_1/media/series
+storage_1/media/sync
+```
+
+Exporting only `/mnt/example_storage/media` over NFS exposes the parent dataset, but not the mounted child dataset contents. Linux clients see the child mountpoint directories, not the data inside them. Classic ZFS/NFS goblin.
+
+**Fix:** Export each child dataset that a Docker node needs, then mount it explicitly on top of the matching child path under `/mnt/nas_media`.
+
+On this setup the child dataset exports must be mounted with NFSv3 from the Docker node. NFSv4 mounted the child paths, but still returned the empty covered mountpoint from the parent dataset.
+
+In this repo the Docker node mounts are defined in:
+
+```text
+group_vars/docker_nodes.yml
+roles/prod_apps/tasks/main.yml
+```
+
+The important bit is that `/mnt/example_storage/media/audiobooks` must be its own NFS export and its own client mount at `/mnt/nas_media/audiobooks`. The same applies to `ebooks`, `music`, `movies`, `series`, and `sync` if those datasets are consumed remotely.
+
+After changing exports or mounts:
+
+```bash
+ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags backups --ask-vault-pass
+ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags books_stack,navidrome,syncthing --ask-vault-pass
+```
+
+Then rescan the affected app, for example Audiobookshelf.
+
+---
+
+## Paperless: `ValueError: unrecognized arguments: --derotate` on document upload
+
+**Symptom:** Uploading any document fails with:
+```
+Error occurred while consuming document <file>.pdf: ValueError: unrecognized arguments: --derotate
+```
+
+**Cause:** `PAPERLESS_OCR_USER_ARGS` in `env.j2` contained `"derotate": true`, which gets passed as `--derotate` to OCRmyPDF. This flag was removed in newer OCRmyPDF versions bundled with Paperless-ngx.
+
+**Fix:** In `roles/prod_apps/templates/paperless/env.j2`, replace:
+```
+PAPERLESS_OCR_USER_ARGS='{"derotate": true, "clean": true}'
+```
+with:
+```
+PAPERLESS_OCR_ROTATE_PAGES=true
+PAPERLESS_OCR_USER_ARGS='{"clean": true}'
+```
+
+`PAPERLESS_OCR_ROTATE_PAGES` is the native Paperless-ngx setting that handles rotation via the correct OCRmyPDF flag. Then redeploy:
+```bash
+ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags paperless --ask-vault-pass
+```
+
+---
+
+## Paperless: `WorkerLostError` / `SIGKILL` on 600 DPI scans
+
+**Symptom:** Large or high-DPI documents fail during consumption with:
+
+```text
+billiard.exceptions.WorkerLostError: Worker exited prematurely: signal 9 (SIGKILL)
+```
+
+On the Docker host, `dmesg` shows `tesseract` or `celeryd` killed by the memory cgroup.
+
+**Cause:** This is an OCR memory kill, not an auth or upload problem. 600 DPI scans are heavy because pixel count grows quickly, and Paperless/OCRmyPDF/Tesseract can fan out work across multiple workers and threads.
+
+**Fix:** Keep Paperless OCR conservative and predictable:
+
+```env
+PAPERLESS_TASK_WORKERS=1
+PAPERLESS_THREADS_PER_WORKER=1
+```
+
+This repo also raises the Paperless webserver memory limit to `4096M`.
+
+For normal paperwork, prefer 300 DPI grayscale scans. Use 600 DPI only when you really need it, because it costs much more RAM and usually gives little extra OCR value for text documents.
+
+Redeploy:
+
+```bash
+ansible-playbook -i inventory.ini deploy_docker_nodes.yml --tags paperless --ask-vault-pass
+```

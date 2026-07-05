@@ -4,7 +4,7 @@ services:
     container_name: calibre_web
     restart: unless-stopped
     ports:
-      - "{{ calibre_web_service_port }}:8083"
+      - "{{ calibre_web_bind_host }}:{{ calibre_web_service_port }}:8083"
     environment:
       - PUID={{ app_uid }}
       - PGID={{ app_gid }}

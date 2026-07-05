@@ -1,0 +1,13 @@
+# Mealie backup - SQLite/app data.
+
+backup_name: "mealie_state"
+target_base_dir: "{{ archwright_backup_dir }}/mealie-state"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  mealie:
+    data:
+      source_dir: "{{ mealie_data_dir }}"
+      include: "*"
+      pre_command: "docker stop mealie"
+      post_command: "docker start mealie"

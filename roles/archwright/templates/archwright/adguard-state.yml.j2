@@ -1,0 +1,11 @@
+# AdGuard Home backup - resolver config, rewrites, filters, stats, and query state.
+
+backup_name: "adguard_state"
+target_base_dir: "{{ archwright_backup_dir }}/adguard-state"
+keep_last: {{ archwright_keep_last }}
+
+structure:
+  adguard:
+    state:
+      source_dir: "{{ docker_data_dir }}/adguard"
+      include: "*"

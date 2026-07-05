@@ -1,0 +1,11 @@
+[Unit]
+Description=Run homelab health metrics textfile collector
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec={{ homelab_health_metrics_interval }}
+AccuracySec=15s
+Unit=homelab-health-metrics.service
+
+[Install]
+WantedBy=timers.target

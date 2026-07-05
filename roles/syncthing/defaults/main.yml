@@ -1,5 +1,5 @@
 ---
-syncthing_version: "latest"
+syncthing_version: "v2.0.15-ls211"
 syncthing_stack_dir: "{{ app_stacks_root | default('/opt') }}/syncthing"
 syncthing_config_dir: "{{ syncthing_stack_dir }}/config"
 syncthing_memory_limit: "512M"
@@ -10,3 +10,8 @@ syncthing_discovery_port: 21027
 
 # Default sync folder on NAS via NFS
 syncthing_sync_dir: "{{ mnt_media }}/sync"
+
+# Host interface for published ports. Defaults to the node's inventory
+# address so containers stop listening on 0.0.0.0 (loopback, docker
+# bridges, and any future interfaces).
+syncthing_bind_host: "{{ ansible_host | default(inventory_hostname) }}"

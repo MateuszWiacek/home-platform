@@ -53,7 +53,7 @@ Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidra
 - **Storage first**: ZFS shouldn't crash because an app got hungry.
 - **Wife test**: non-technical household member can navigate without help. One dashboard, clean URLs, nothing breaks silently.
 
-> Examples below use `homelab.local` for anonymity. In a real deployment, Cloudflare DNS-01 still requires a real registered domain.
+> Real domain used in this setup: `homelab.local`. DNS-01 requires a real registered domain pointing to Cloudflare.
 
 ---
 
@@ -105,12 +105,12 @@ Everything behind Traefik, HTTPS via Cloudflare DNS-01. No inbound router exposu
 | Linkwarden | `https://links.homelab.local` | Ryzen VM |
 | Syncthing | `https://sync.homelab.local` *(optional)* | Ryzen VM |
 | Grafana | `https://monitor.homelab.local` *(optional)* | Ryzen VM |
-| Dozzle | `https://logs.homelab.local` *(optional)* | Ryzen VM |
+| Dozzle | `https://logs.homelab.local` | Ryzen VM |
 | ntfy | `https://ntfy.homelab.local` | NAS |
 | TrueNAS UI | `https://nas.homelab.local` | NAS |
 | Proxmox | `https://pve.homelab.local` | NAS -> Proxmox |
 
-Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, Grafana, and the utility tools run on the Ryzen VM but route through NAS Traefik via file provider. Docker socket provider only sees local containers. ntfy runs on NAS and stays available even when Ryzen is down - alert delivery cannot depend on the compute node. Dozzle is optional in the public branch because it exposes a direct host port on the Ryzen node. Syncthing is optional because its sync directory must exist on the NAS first. Monitoring is optional because metrics are useful, but they are not part of the minimum viable homestack.
+Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidraw, Mealie, Linkwarden, Grafana, Dozzle, and the utility tools run on the Ryzen VM but route through NAS Traefik via file provider. Docker socket provider only sees local containers. ntfy runs on NAS and stays available even when Ryzen is down - alert delivery cannot depend on the compute node. Syncthing is optional because its sync directory must exist on the NAS first. Monitoring is optional because metrics are useful, but they are not part of the minimum viable homestack.
 
 ---
 

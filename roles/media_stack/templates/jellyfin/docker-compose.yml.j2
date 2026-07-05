@@ -11,7 +11,7 @@ services:
       - {{ jellyfin_stack_dir }}:/config
       - {{ media_root_dir }}:/data/media
     ports:
-      - "{{ jellyfin_service_port }}:8096"
+      - "{{ jellyfin_bind_host }}:{{ jellyfin_service_port }}:8096"
     devices:
       # Pass-through Intel iGPU for hardware transcoding (QuickSync)
       - /dev/dri:/dev/dri
