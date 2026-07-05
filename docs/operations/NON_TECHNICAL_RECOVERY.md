@@ -35,3 +35,13 @@ The NAS (small box, always on) probably needs a restart:
 ## Step 4: Still broken
 
 Call/message Mateusz. Take a photo of any error message visible on screen - it helps a lot.
+
+---
+
+## What not to do
+
+- Do not delete containers, volumes, or apps.
+- Do not click **Recreate**, **Reset**, or **Remove** in Portainer.
+- Do not change DNS, router, or Wi-Fi settings.
+- Do not restart the router repeatedly; one clean restart is enough.
+- Do not keep guessing passwords. Take a photo of the error and send it.

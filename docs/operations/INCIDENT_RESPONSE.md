@@ -26,7 +26,7 @@ ssh admin@10.0.0.10 "sudo docker logs --tail 200 authentik-worker"
 dig +short auth.homelab.local @10.0.0.10
 
 # 5) ACME sanity (DNS-01)
-dig TXT _acme-challenge.homelab.local @1.1.1.1
+dig TXT _acme-challenge.<your-domain> @1.1.1.1
 ```
 
 ---
@@ -77,7 +77,7 @@ ssh admin@10.0.0.10 "sudo docker logs --tail 200 adguard"
 
 ```bash
 ssh admin@10.0.0.10 "sudo docker logs --tail 400 traefik | grep -iE 'acme|challenge|cert|error'"
-dig TXT _acme-challenge.homelab.local @1.1.1.1  # real domain used for ACME DNS-01
+dig TXT _acme-challenge.<your-domain> @1.1.1.1  # real Cloudflare-managed domain used for DNS-01
 ssh admin@10.0.0.10 "cd /mnt/example_apps/appdata/docker/config/traefik && sudo docker compose up -d --remove-orphans"
 ```
 

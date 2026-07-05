@@ -86,8 +86,7 @@ docs/                   architecture, identity, setup, operations, reference
 
 ## About This Public Copy
 
-This is the public, sanitized copy of a privately-developed home platform. A
-leak-gated publication filter ([`scripts/sanitize-for-publication.py`](scripts/sanitize-for-publication.py))
-strips operational identifiers (real domain, LAN addresses, storage paths, key
-names) and fails the build if any survive. Actively maintained; the public copy
-is refreshed from the private repo on each release.
+This public repo is the generated artifact, not the private source tree. The
+leak gate runs in the private repo, where the substitution and denylist config
+exists; that config is intentionally not published because it contains real
+identifiers. The published copy is refreshed from that pipeline on each release.

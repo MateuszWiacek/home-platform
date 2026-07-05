@@ -6,13 +6,13 @@ How to get TLS certificates on a LAN without opening any ports to the internet.
 
 ## Why DNS-01
 
-Traefik needs valid TLS certs for `*.homelab.local`. The standard HTTP-01 challenge requires port 80 open to the internet. DNS-01 proves domain ownership by creating a TXT record in Cloudflare DNS - no inbound traffic needed.
+Traefik needs valid TLS certs for the real deployment domain. The public copy uses `homelab.local` as a placeholder, but DNS-01 still requires a registered Cloudflare-managed domain. The standard HTTP-01 challenge requires port 80 open to the internet. DNS-01 proves domain ownership by creating a TXT record in Cloudflare DNS - no inbound traffic needed.
 
 ---
 
 ## Prerequisites
 
-- A registered domain (this repo uses `homelab.local`)
+- A registered Cloudflare-managed domain. In this public copy, `homelab.local` is only a placeholder.
 - Domain DNS managed by Cloudflare (nameservers pointed to Cloudflare)
 - A Cloudflare account (free tier is fine)
 

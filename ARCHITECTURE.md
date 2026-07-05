@@ -53,7 +53,7 @@ Immich, Paperless-ngx, Navidrome, Audiobookshelf, Calibre-Web, SiYuan, Excalidra
 - **Storage first**: ZFS shouldn't crash because an app got hungry.
 - **Wife test**: non-technical household member can navigate without help. One dashboard, clean URLs, nothing breaks silently.
 
-> Real domain used in this setup: `homelab.local`. DNS-01 requires a real registered domain pointing to Cloudflare.
+> Public copy uses `homelab.local` as a sanitized placeholder. The private deployment uses a real Cloudflare-managed domain for DNS-01 certificate issuance.
 
 ---
 

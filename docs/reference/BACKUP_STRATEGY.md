@@ -92,6 +92,12 @@ One backup tool, deployed on both nodes:
 - Atomic ZIP archives with rotation (keep_last 7 on NAS, 28 on Ryzen)
 - Config files: `roles/archwright/templates/archwright/`
 
+### Archwright GUI threat model
+
+The Archwright GUI role is disabled by default and treated as an operational cockpit, not a general shell.
+If enabled, it should stay behind Traefik/Auth, on the LAN, with a dedicated SSH key stored via Ansible Vault.
+The container mounts that key read-only, uses pinned `known_hosts`, and the NAS sudoers rule is constrained to the Archwright wrapper only. A GUI/container compromise would still be serious, so this is not exposed directly and is kept separate from the backup data path.
+
 ---
 
 ## What is NOT backed up
