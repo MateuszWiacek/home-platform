@@ -16,57 +16,52 @@ media_root_dir: "/mnt/example_storage/media"
 # === Traefik compatibility (production/main naming & access) ===
 # Use exact upstream tags where they exist. They are easier to review than digests
 # while still avoiding floating `latest` updates for core services.
-traefik_version: "v3.6.8"
+traefik_version: "v3.7.12"
 traefik_publish_api_port: true
 traefik_dashboard_via_router: false
 enable_remote_apps_routes: true
 
 # === Authentik ===
-authentik_version: "2025.12.3"
+authentik_version: "2026.8.1"
 authentik_postgres_image: "docker.io/library/postgres:16-alpine"
 authentik_redis_image: "docker.io/library/redis:alpine"
 
 # === AdGuard Home ===
-adguard_version: "v0.107.71"
-
+adguard_version: "v0.107.79"
 # === Vaultwarden ===
-vaultwarden_version: "1.35.3"
+vaultwarden_version: "1.37.2"
 # Set to true only during initial setup to allow first account creation.
 # Must be switched to false and redeployed immediately after.
 vaultwarden_signups_allowed: false
 
 # === Portainer ===
-portainer_version: "2.33.7"
-
+portainer_version: "2.45.0"
 # === Jellyfin ===
 jellyfin_version: "10.11.6ubu2404-ls20"
 
 # === Homepage ===
-homepage_version: "v1.10.1"
-
+homepage_version: "v2.2.0"
 # === Monitoring exporters ===
 monitoring_exporters_host_label: "nas"
 exporters_stack_dir: "{{ docker_config_dir }}/monitoring-exporters"
-node_exporter_version: "v1.9.0"
-cadvisor_version: "v0.51.0"
+node_exporter_version: "v1.12.1"
+cadvisor_version: "v0.60.5"
 smartctl_exporter_enabled: true
 smartctl_exporter_version: "v0.14.0"
 authentik_postgres_exporter_enabled: true
 authentik_postgres_exporter_version: "v0.15.0"
 
 # === Ntfy ===
-ntfy_version: "v2.11.0"
+ntfy_version: "v2.28.0"
 ntfy_stack_dir: "{{ docker_config_dir }}/ntfy"
 ntfy_data_dir: "{{ docker_data_dir }}/ntfy/data"
 ntfy_cache_dir: "{{ docker_data_dir }}/ntfy/cache"
 
 # === Dozzle agent (NAS side) ===
 dozzle_agent_enabled: true
-dozzle_agent_version: "v10.1.2"
-
+dozzle_agent_version: "v10.10.0"
 # === Promtail (log shipper to Loki) ===
-promtail_version: "3.5.0"
-
+promtail_version: "3.7.7"
 # === Archwright (NAS-local backups) ===
 archwright_config_dir: "{{ docker_config_dir }}/archwright"
 archwright_backup_dir: "/mnt/example_apps/backup/archwright"
